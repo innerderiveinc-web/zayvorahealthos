@@ -1,0 +1,35 @@
+# Netlify Deployment Configuration for ZMIE
+# ZAYVORA Medical Intelligence Engine (Production Ready)
+
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/workbench"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/workbench/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/catalog_seed.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "application/json; charset=utf-8"

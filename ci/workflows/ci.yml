@@ -1,0 +1,35 @@
+name: ZMIE CI/CD Quality & Zero-Hallucination Gate
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify-engine:
+    name: Verify Engine, Agents & Zero-Hallucination Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Engine Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastapi "uvicorn[standard]" pydantic pydantic-settings httpx asyncpg neo4j redis sqlalchemy greenlet
+
+      - name: Run Master 9-Pillar End-to-End Verification
+        run: |
+          PYTHONPATH=services/engine python tests/master_showcase.py
+
+      - name: Run Quantitative Adversarial & Safety Evaluation Suite
+        run: |
+          PYTHONPATH=services/engine python services/engine/app/core/eval_suite.py

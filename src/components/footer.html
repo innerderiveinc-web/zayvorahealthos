@@ -1,0 +1,25 @@
+<!-- Feature 5: Mobile App Native Sticky Bottom Navigation Bar (md:hidden) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-xl border-t border-gray-800 px-3 py-2 flex items-center justify-around text-[10px] shadow-2xl">
+    <button onclick="handleEvidenceTabClick(); setActiveMobileTab('mob-nav-search');" id="mob-nav-search" class="flex flex-col items-center gap-1 text-teal-400 font-bold transition">
+      <i class="fa-solid fa-magnifying-glass text-base"></i>
+      <span>Evidence</span>
+    </button>
+    <button onclick="switchMode('encyclopedia'); setActiveMobileTab('mob-nav-materia');" id="mob-nav-materia" class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition">
+      <i class="fa-solid fa-book-atlas text-base"></i>
+      <span>Materia Medica</span>
+    </button>
+    <button onclick="switchMode('simulator'); setActiveMobileTab('mob-nav-safety');" id="mob-nav-safety" class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition">
+      <i class="fa-solid fa-shield-halved text-base"></i>
+      <span>Safety Guard</span>
+    </button>
+    <button onclick="switchMode('prisma'); setActiveMobileTab('mob-nav-prisma');" id="mob-nav-prisma" class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition">
+      <i class="fa-solid fa-chart-column text-base"></i>
+      <span>PRISMA</span>
+    </button>
+  </nav>
+
+  <!-- Padding spacer for mobile navigation so content is never obscured -->
+  <div class="md:hidden h-16 w-full"></div>
+
+</body>
+</html>

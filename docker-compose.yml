@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  # 1. Relational + Vector Storage
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: zmie-postgres
+    environment:
+      POSTGRES_USER: zmie_admin
+      POSTGRES_PASSWORD: zmie_secure_password
+      POSTGRES_DB: zmie_knowledge_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zmie_admin -d zmie_knowledge_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-network
+
+  # 2. Graph Database for Cross-System & Evidence Graphs
+  neo4j:
+    image: neo4j:5.18.0-community
+    container_name: zmie-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/zmie_graph_password
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474" # Browser UI
+      - "7687:7687" # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - zmie-network
+
+  # 3. Cache & Event Broker
+  redis:
+    image: redis:7.2-alpine
+    container_name: zmie-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-network
+
+  # 4. Lexical Search & Observability Engine
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    container_name: zmie-opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - zmie-network
+
+  # 5. Immutable Document & Artifact Storage (S3 compatible)
+  minio:
+    image: minio/minio:RELEASE.2024-03-30T09-41-56Z
+    container_name: zmie-minio
+    environment:
+      MINIO_ROOT_USER: zmie_minio_admin
+      MINIO_ROOT_PASSWORD: zmie_minio_secret_key
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-network
+
+  # 5b. MinIO Automatic Bucket Provisioning
+  minio-init:
+    image: minio/mc:latest
+    container_name: zmie-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set zmie_local http://minio:9000 zmie_minio_admin zmie_minio_secret_key;
+      /usr/bin/mc mb --ignore-existing zmie_local/zmie-immutable-documents;
+      /usr/bin/mc mb --ignore-existing zmie_local/zmie-research-snapshots;
+      echo 'MinIO Buckets Successfully Provisioned';
+      exit 0;
+      "
+    networks:
+      - zmie-network
+
+  # 6. Core ZMIE FastAPI Intelligence Engine
+  engine:
+    build:
+      context: .
+      dockerfile: services/engine/Dockerfile
+    container_name: zmie-engine
+    environment:
+      ZMIE_ENV: development
+      DATABASE_URL: postgresql://zmie_admin:zmie_secure_password@postgres:5432/zmie_knowledge_db
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: zmie_graph_password
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      OPENSEARCH_URL: http://opensearch:9200
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - zmie-network
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  redis_data:
+  opensearch_data:
+  minio_data:
+
+networks:
+  zmie-network:
+    driver: bridge
