@@ -1185,12 +1185,7 @@ ER  - `;
       }
     });
 
-    const locOrigin = (window.location && window.location.origin && window.location.origin !== 'null')
-      ? window.location.origin
-      : ((window.location && window.location.protocol && window.location.host) ? window.location.protocol + '//' + window.location.host : '');
-    const API_BASE = (locOrigin.includes('localhost') || locOrigin.includes('127.0.0.1'))
-      ? locOrigin
-      : (window.ZMIE_BACKEND_URL || locOrigin || '');
+    // locOrigin and API_BASE initialized at top of script
 
     function safeScrollTo(opts) {
       try {
