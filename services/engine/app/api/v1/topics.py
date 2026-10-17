@@ -65,6 +65,24 @@ async def list_encyclopedia_topics(
     along with canonical medical disciplines and gold-standard textbook codices.
     """
     catalog = ClassicalCorpusBulkLoader.get_catalog(system=system, domain=category, query=q)
+    pharm_entries = PharmacopoeiaMasterRegistry.get_all()
+    existing_keys = {x["key"] for x in catalog}
+    for p in pharm_entries:
+        if p["key"] not in existing_keys:
+            if system:
+                p_sys = p.get("system", "").lower()
+                if system.lower() not in p_sys:
+                    continue
+            if category:
+                p_dom = p.get("clinical_domain", "").lower()
+                if category.lower() not in p_dom:
+                    continue
+            if q:
+                q_low = q.lower()
+                text = f"{p.get('botanical_name', '')} {p.get('common_names', [])} {p.get('unani_name', '')} {p.get('sanskrit_name', '')}".lower()
+                if q_low not in text:
+                    continue
+            catalog.append(p)
     
     disciplines_data = MedicalDisciplinesBulkLoader.get_all_disciplines()
     if discipline:

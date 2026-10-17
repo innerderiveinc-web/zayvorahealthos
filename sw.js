@@ -1,11 +1,11 @@
 // ZMIE Progressive Web App (PWA) Offline-First Service Worker
-// Version 5.0 - Production Resilient (Unified Catalog & NTI Safety Suite)
-const CACHE_NAME = 'zmie-v5-offline-cache';
+// Version 7.0 - Production Resilient (657 Botanical Pharmacopoeia & Classical Corpus)
+const CACHE_NAME = 'zmie-v7-offline-cache';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/workbench',
-  '/catalog_seed.json',
+  '/catalog_seed.json?v=657_v2',
   '/services/data/qarabadeen_master_library.json'
 ];
 

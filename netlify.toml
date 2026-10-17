@@ -31,5 +31,5 @@
 [[headers]]
   for = "/catalog_seed.json"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "no-cache, must-revalidate"
     Content-Type = "application/json; charset=utf-8"

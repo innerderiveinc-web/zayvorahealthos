@@ -4254,8 +4254,8 @@
       <!-- Encyclopedia Stats & Results Meta -->
       <div class="flex items-center justify-between text-xs text-gray-400 px-1 flex-wrap gap-2">
         <div>
-          Showing <span id="enc-count-visible" class="text-emerald-400 font-bold font-mono">35</span> of 
-          <span id="enc-count-total" class="text-gray-200 font-mono">35</span> <span id="enc-entity-type-label">authentic monographs</span>
+          Showing <span id="enc-count-visible" class="text-emerald-400 font-bold font-mono">657</span> of 
+          <span id="enc-count-total" class="text-gray-200 font-mono">657</span> <span id="enc-entity-type-label">authentic monographs</span>
         </div>
         <div id="enc-canon-badges" class="flex items-center gap-4 text-[11px] text-gray-500 flex-wrap">
           <span><i class="fa-solid fa-circle-check text-amber-500 mr-1"></i> Al-Qanun &amp; Makhzan</span>
@@ -11008,8 +11008,8 @@ const CLINICAL_MONOGRAPHS = {
     async function prewarmCatalogMonographs() {
       if (window.globalMonographsCache && Object.keys(window.globalMonographsCache).length >= 657 && window.globalEncyclopediaCatalog && window.globalEncyclopediaCatalog.length >= 657) return;
       try {
-        let res = await fetch('./catalog_seed.json');
-        if (!res.ok) res = await fetch('/catalog_seed.json');
+        let res = await fetch('./catalog_seed.json?v=657_v2');
+        if (!res.ok) res = await fetch('/catalog_seed.json?v=657_v2');
         if (res.ok) {
           const data = await res.json();
           if (data && data.monographs) window.globalMonographsCache = Object.assign({}, window.globalMonographsCache || {}, data.monographs);
@@ -16531,8 +16531,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       if (!data) {
         if (!window.globalPrismaPresets) {
           try {
-            let fb = await fetch('./catalog_seed.json');
-            if (!fb.ok) fb = await fetch('/catalog_seed.json');
+            let fb = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
             if (fb.ok) {
               const fbData = await fb.json();
               if (fbData && fbData.prisma_presets) window.globalPrismaPresets = fbData.prisma_presets;
@@ -17134,8 +17134,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
         // Static seed fallback for CDN/Netlify/Offline hosting:
         if (!window.globalEncyclopediaCatalog || window.globalEncyclopediaCatalog.length < 657) {
           try {
-            let fallbackRes = await fetch('./catalog_seed.json');
-            if (!fallbackRes.ok) fallbackRes = await fetch('/catalog_seed.json');
+            let fallbackRes = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fallbackRes.ok) fallbackRes = await fetch('/catalog_seed.json?v=657_v2');
             if (fallbackRes.ok) {
               const fbData = await fallbackRes.json();
               if (fbData && Array.isArray(fbData.entries)) {
@@ -17745,8 +17745,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
           if (!window.globalQarabadeenReconciliations || window.globalQarabadeenReconciliations.length === 0) {
             try {
-              let fb = await fetch('./catalog_seed.json');
-              if (!fb.ok) fb = await fetch('/catalog_seed.json');
+              let fb = await fetch('./catalog_seed.json?v=657_v2');
+              if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
               if (fb.ok) {
                 const fbData = await fb.json();
                 if (fbData && Array.isArray(fbData.qarabadeen_reconciliations)) {
@@ -17826,8 +17826,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
         if (!r) {
           try {
-            let fb = await fetch('./catalog_seed.json');
-            if (!fb.ok) fb = await fetch('/catalog_seed.json');
+            let fb = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
             if (fb.ok) {
               const fbData = await fb.json();
               if (fbData && Array.isArray(fbData.qarabadeen_reconciliations)) {
@@ -18189,8 +18189,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
           if (!m) {
             try {
-              let fb = await fetch('./catalog_seed.json');
-              if (!fb.ok) fb = await fetch('/catalog_seed.json');
+              let fb = await fetch('./catalog_seed.json?v=657_v2');
+              if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
               if (fb.ok) {
                 const fbData = await fb.json();
                 if (fbData && fbData.monographs) {
@@ -22973,6 +22973,17 @@ ER  - `;
     // Auto-purge stale cache if ?reset=1 or ?clearcache=1 is in URL
     if (window.location.search && (window.location.search.includes('reset=1') || window.location.search.includes('clearcache=1'))) {
       window.emergencyResetApp();
+    }
+
+    // Auto-purge stale cache for Version 657 upgrade
+    const ZMIE_VERSION_KEY = 'zmie_pwa_ver_657_v2';
+    if (!localStorage.getItem(ZMIE_VERSION_KEY)) {
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(k => {
+          if (k !== 'zmie-v7-offline-cache') caches.delete(k);
+        }));
+      }
+      localStorage.setItem(ZMIE_VERSION_KEY, '1');
     }
 
     // PWA & Service Worker Registration with automatic update claiming

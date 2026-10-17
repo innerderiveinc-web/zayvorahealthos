@@ -1922,8 +1922,8 @@ const CLINICAL_MONOGRAPHS = {
     async function prewarmCatalogMonographs() {
       if (window.globalMonographsCache && Object.keys(window.globalMonographsCache).length >= 657 && window.globalEncyclopediaCatalog && window.globalEncyclopediaCatalog.length >= 657) return;
       try {
-        let res = await fetch('./catalog_seed.json');
-        if (!res.ok) res = await fetch('/catalog_seed.json');
+        let res = await fetch('./catalog_seed.json?v=657_v2');
+        if (!res.ok) res = await fetch('/catalog_seed.json?v=657_v2');
         if (res.ok) {
           const data = await res.json();
           if (data && data.monographs) window.globalMonographsCache = Object.assign({}, window.globalMonographsCache || {}, data.monographs);
@@ -7445,8 +7445,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       if (!data) {
         if (!window.globalPrismaPresets) {
           try {
-            let fb = await fetch('./catalog_seed.json');
-            if (!fb.ok) fb = await fetch('/catalog_seed.json');
+            let fb = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
             if (fb.ok) {
               const fbData = await fb.json();
               if (fbData && fbData.prisma_presets) window.globalPrismaPresets = fbData.prisma_presets;
@@ -8048,8 +8048,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
         // Static seed fallback for CDN/Netlify/Offline hosting:
         if (!window.globalEncyclopediaCatalog || window.globalEncyclopediaCatalog.length < 657) {
           try {
-            let fallbackRes = await fetch('./catalog_seed.json');
-            if (!fallbackRes.ok) fallbackRes = await fetch('/catalog_seed.json');
+            let fallbackRes = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fallbackRes.ok) fallbackRes = await fetch('/catalog_seed.json?v=657_v2');
             if (fallbackRes.ok) {
               const fbData = await fallbackRes.json();
               if (fbData && Array.isArray(fbData.entries)) {
@@ -8659,8 +8659,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
           if (!window.globalQarabadeenReconciliations || window.globalQarabadeenReconciliations.length === 0) {
             try {
-              let fb = await fetch('./catalog_seed.json');
-              if (!fb.ok) fb = await fetch('/catalog_seed.json');
+              let fb = await fetch('./catalog_seed.json?v=657_v2');
+              if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
               if (fb.ok) {
                 const fbData = await fb.json();
                 if (fbData && Array.isArray(fbData.qarabadeen_reconciliations)) {
@@ -8740,8 +8740,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
         if (!r) {
           try {
-            let fb = await fetch('./catalog_seed.json');
-            if (!fb.ok) fb = await fetch('/catalog_seed.json');
+            let fb = await fetch('./catalog_seed.json?v=657_v2');
+            if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
             if (fb.ok) {
               const fbData = await fb.json();
               if (fbData && Array.isArray(fbData.qarabadeen_reconciliations)) {
@@ -9103,8 +9103,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
 
           if (!m) {
             try {
-              let fb = await fetch('./catalog_seed.json');
-              if (!fb.ok) fb = await fetch('/catalog_seed.json');
+              let fb = await fetch('./catalog_seed.json?v=657_v2');
+              if (!fb.ok) fb = await fetch('/catalog_seed.json?v=657_v2');
               if (fb.ok) {
                 const fbData = await fb.json();
                 if (fbData && fbData.monographs) {

@@ -1258,6 +1258,17 @@ ER  - `;
       window.emergencyResetApp();
     }
 
+    // Auto-purge stale cache for Version 657 upgrade
+    const ZMIE_VERSION_KEY = 'zmie_pwa_ver_657_v2';
+    if (!localStorage.getItem(ZMIE_VERSION_KEY)) {
+      if ('caches' in window) {
+        caches.keys().then(keys => keys.forEach(k => {
+          if (k !== 'zmie-v7-offline-cache') caches.delete(k);
+        }));
+      }
+      localStorage.setItem(ZMIE_VERSION_KEY, '1');
+    }
+
     // PWA & Service Worker Registration with automatic update claiming
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
