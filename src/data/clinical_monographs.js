@@ -7967,6 +7967,9 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       if (typeof prewarmCatalogMonographs === 'function') {
         prewarmCatalogMonographs();
       }
+      if (typeof loadSystemSettings === 'function') {
+        loadSystemSettings();
+      }
 
       const params = new URLSearchParams(window.location.search);
       const q = params.get('q');

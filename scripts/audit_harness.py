@@ -152,6 +152,7 @@ var document = {
   createElement: function() { return { setAttribute: function(){}, appendChild: function(){}, classList: { add: function(){} }, style: {}, click: function(){}, focus: function(){}, select: function(){} }; },
   createTextNode: function(t) { return { textContent: t }; },
   body: { classList: { add: function(){}, remove: function(){}, contains: function(){ return false; }, toggle: function(){} }, appendChild: function(){}, removeChild: function(){} },
+  documentElement: { style: {}, classList: { add: function(){}, remove: function(){}, contains: function(){ return false; }, toggle: function(){} } },
   addEventListener: function() {}, activeElement: { tagName: 'BODY' }, execCommand: function() { return true; }
 };
 var localStorage = { getItem: function() { return null; }, setItem: function() {}, removeItem: function() {} };

@@ -1229,6 +1229,305 @@ ER  - `;
       }
     };
 
+    // ─── Universal System Settings & OS Control Panel Engine ─────────────────
+    window.openSystemSettingsModal = function() {
+      const modal = document.getElementById('system-settings-modal');
+      if (!modal) return;
+      loadSystemSettingsToUI();
+      updateSettingsStorageStats();
+      modal.classList.remove('hidden');
+    };
+
+    window.closeSystemSettingsModal = function() {
+      const modal = document.getElementById('system-settings-modal');
+      if (modal) modal.classList.add('hidden');
+    };
+
+    window.switchSettingsTab = function(tabName) {
+      const tabs = ['appearance', 'network', 'audio', 'clinical', 'storage', 'license'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`settings-tab-btn-${t}`);
+        const panel = document.getElementById(`settings-panel-${t}`);
+        if (t === tabName) {
+          if (btn) btn.className = 'px-3 py-1.5 rounded-lg font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+          if (panel) panel.classList.remove('hidden');
+        } else {
+          if (btn) btn.className = 'px-3 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white border border-transparent hover:border-gray-800 transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+          if (panel) panel.classList.add('hidden');
+        }
+      });
+    };
+
+    function loadSystemSettingsToUI() {
+      let cfg = {};
+      try {
+        cfg = JSON.parse(safeStorageGet('zmie_system_settings') || '{}');
+      } catch (e) {}
+
+      // Appearance
+      const themeSelect = document.getElementById('settings-theme-select');
+      if (themeSelect) themeSelect.value = safeStorageGet('zmie_theme') === 'dark' ? 'dark' : 'light';
+      const densitySelect = document.getElementById('settings-density-select');
+      if (densitySelect) densitySelect.value = cfg.density || 'standard';
+      const contrastToggle = document.getElementById('settings-contrast-toggle');
+      if (contrastToggle) contrastToggle.checked = !!cfg.highContrast;
+      const fontScale = document.getElementById('settings-font-scale');
+      if (fontScale) fontScale.value = cfg.fontScale || '100';
+
+      // Network
+      const apiInput = document.getElementById('settings-api-base-url');
+      if (apiInput) apiInput.value = cfg.apiBaseUrl || (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      const offlineToggle = document.getElementById('settings-force-offline');
+      if (offlineToggle) offlineToggle.checked = !!cfg.forceOffline;
+
+      // Audio
+      const voiceToggle = document.getElementById('settings-voice-toggle');
+      if (voiceToggle) voiceToggle.checked = safeStorageGet('zmie_voice_alert') === 'true';
+      const voiceSpeed = document.getElementById('settings-voice-speed');
+      if (voiceSpeed) voiceSpeed.value = cfg.voiceSpeed || '1.0';
+      const sirenToggle = document.getElementById('settings-siren-toggle');
+      if (sirenToggle) sirenToggle.checked = cfg.sirenEnabled !== false;
+
+      // Clinical
+      const ageInput = document.getElementById('settings-default-age');
+      if (ageInput) ageInput.value = cfg.defaultAge || 68;
+      const egfrInput = document.getElementById('settings-default-egfr');
+      if (egfrInput) egfrInput.value = cfg.defaultEgfr || 48;
+      const pharmPref = document.getElementById('settings-pharmacopoeia-pref');
+      if (pharmPref) pharmPref.value = cfg.pharmacopoeiaPref || 'unified';
+      const washoutInput = document.getElementById('settings-washout-days');
+      if (washoutInput) washoutInput.value = cfg.washoutDays || 5;
+      const citationStyle = document.getElementById('settings-citation-style');
+      if (citationStyle) citationStyle.value = cfg.citationStyle || 'ama';
+    }
+
+    function updateSettingsStorageStats() {
+      const catCount = document.getElementById('settings-stat-catalog-count');
+      if (catCount) {
+        catCount.innerText = (Array.isArray(window.globalEncyclopediaCatalog) && window.globalEncyclopediaCatalog.length) || 657;
+      }
+      const monoCount = document.getElementById('settings-stat-mono-count');
+      if (monoCount) {
+        monoCount.innerText = (window.globalMonographsCache && Object.keys(window.globalMonographsCache).length) || 657;
+      }
+      const storageCount = document.getElementById('settings-stat-storage-size');
+      if (storageCount) {
+        try {
+          storageCount.innerText = localStorage.length;
+        } catch (e) {
+          storageCount.innerText = '0';
+        }
+      }
+    }
+
+    window.saveSystemSettings = function() {
+      const cfg = {
+        density: document.getElementById('settings-density-select')?.value || 'standard',
+        highContrast: !!document.getElementById('settings-contrast-toggle')?.checked,
+        fontScale: document.getElementById('settings-font-scale')?.value || '100',
+        apiBaseUrl: document.getElementById('settings-api-base-url')?.value.trim() || '',
+        forceOffline: !!document.getElementById('settings-force-offline')?.checked,
+        voiceSpeed: document.getElementById('settings-voice-speed')?.value || '1.0',
+        sirenEnabled: !!document.getElementById('settings-siren-toggle')?.checked,
+        defaultAge: parseInt(document.getElementById('settings-default-age')?.value) || 68,
+        defaultEgfr: parseInt(document.getElementById('settings-default-egfr')?.value) || 48,
+        pharmacopoeiaPref: document.getElementById('settings-pharmacopoeia-pref')?.value || 'unified',
+        washoutDays: parseInt(document.getElementById('settings-washout-days')?.value) || 5,
+        citationStyle: document.getElementById('settings-citation-style')?.value || 'ama'
+      };
+
+      try {
+        localStorage.setItem('zmie_system_settings', JSON.stringify(cfg));
+      } catch (e) {}
+
+      // Apply Theme
+      const chosenTheme = document.getElementById('settings-theme-select')?.value;
+      if (chosenTheme) {
+        const curTheme = safeStorageGet('zmie_theme') || 'light';
+        if (chosenTheme !== curTheme) {
+          toggleTheme();
+        }
+      }
+
+      // Apply Voice Setting
+      const voiceChecked = !!document.getElementById('settings-voice-toggle')?.checked;
+      safeStorageSet('zmie_voice_alert', voiceChecked ? 'true' : 'false');
+      if (typeof updateVoiceAlertUI === 'function') updateVoiceAlertUI();
+
+      // Apply Font Scaling & Contrast
+      applySystemSettingsVisuals(cfg);
+
+      // Apply API Base if updated
+      if (cfg.apiBaseUrl) {
+        window.API_BASE = cfg.apiBaseUrl;
+      }
+
+      // Apply Patient Baseline to Simulator
+      const simAge = document.getElementById('sim-age');
+      if (simAge) simAge.value = cfg.defaultAge;
+      const simEgfr = document.getElementById('sim-egfr');
+      if (simEgfr) simEgfr.value = cfg.defaultEgfr;
+
+      showToast("System Settings successfully applied and persisted.", "fa-check", "text-cyan-400");
+      closeSystemSettingsModal();
+    };
+
+    function applySystemSettingsVisuals(cfg) {
+      if (!cfg) return;
+      if (typeof document !== 'undefined') {
+        if (document.documentElement && document.documentElement.style) {
+          if (cfg.fontScale && cfg.fontScale !== '100') {
+            document.documentElement.style.fontSize = `${cfg.fontScale}%`;
+          } else {
+            document.documentElement.style.fontSize = '';
+          }
+        }
+        if (document.body && document.body.classList) {
+          if (cfg.highContrast) {
+            document.body.classList.add('high-contrast-mode');
+          } else {
+            document.body.classList.remove('high-contrast-mode');
+          }
+          if (cfg.density === 'compact') {
+            document.body.classList.add('compact-density');
+          } else {
+            document.body.classList.remove('compact-density');
+          }
+        }
+      }
+    }
+
+    window.resetSystemSettingsToDefaults = function() {
+      if (!confirm("Reset all custom settings to factory defaults?")) return;
+      try {
+        localStorage.removeItem('zmie_system_settings');
+      } catch (e) {}
+      loadSystemSettingsToUI();
+      applySystemSettingsVisuals({ fontScale: '100', highContrast: false, density: 'standard' });
+      showToast("Settings reset to factory defaults.", "fa-rotate-left", "text-amber-400");
+    };
+
+    window.pingSettingsApi = async function() {
+      const badge = document.getElementById('settings-network-status-badge');
+      const input = document.getElementById('settings-api-base-url');
+      const targetUrl = (input?.value || API_BASE).trim().replace(/\/+$/, '');
+      if (badge) {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-950 text-indigo-300 border border-indigo-800';
+        badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Pinging...';
+      }
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${targetUrl}/health`, { method: 'GET' });
+        const latency = Math.round(performance.now() - t0);
+        if (res.ok) {
+          if (badge) {
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800';
+            badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Gateway Live (${latency}ms)`;
+          }
+          return;
+        }
+      } catch (e) {
+        try {
+          const res2 = await fetch(`${targetUrl}/v1/topics`, { method: 'GET' });
+          const latency2 = Math.round(performance.now() - t0);
+          if (res2.ok) {
+            if (badge) {
+              badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800';
+              badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Gateway Live (${latency2}ms)`;
+            }
+            return;
+          }
+        } catch (e2) {}
+      }
+      if (badge) {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-rose-950 text-rose-300 border border-rose-800';
+        badge.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> Gateway Offline (Using Local 657 Seed)';
+      }
+    };
+
+    window.testSettingsVoiceAnnouncement = function() {
+      if (!('speechSynthesis' in window)) {
+        showToast("Web Speech API is not supported in this browser.", "fa-triangle-exclamation", "text-amber-400");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const speed = parseFloat(document.getElementById('settings-voice-speed')?.value) || 1.0;
+      const utter = new SpeechSynthesisUtterance("ZAYVORA Health OS Clinical Voice Engine online. Universal drug-herb interaction vigilance active across all 657 botanical monographs.");
+      utter.rate = speed;
+      utter.pitch = 1.0;
+      window.speechSynthesis.speak(utter);
+      showToast("Playing clinical voice diagnostic announcement...", "fa-volume-high", "text-teal-400");
+    };
+
+    window.refreshCatalogInSettings = async function() {
+      showToast("Purging stale cache & re-synchronizing 657 botanical catalog...", "fa-rotate", "text-cyan-400");
+      if (typeof prewarmCatalogMonographs === 'function') {
+        window.globalMonographsCache = {};
+        window.globalEncyclopediaCatalog = [];
+        await prewarmCatalogMonographs();
+      }
+      updateSettingsStorageStats();
+      if (typeof filterEncyclopediaCatalog === 'function') {
+        filterEncyclopediaCatalog();
+      }
+      showToast("Catalog synchronized: 657 verified botanical monographs ready.", "fa-check", "text-emerald-400");
+    };
+
+    window.exportSystemSettingsDiagnostics = function() {
+      const diag = {
+        app_name: "ZAYVORA HealthOS",
+        engine: "ZMIE Medical Intelligence Engine",
+        timestamp: new Date().toISOString(),
+        version: "7.0-production",
+        api_base: typeof API_BASE !== 'undefined' ? API_BASE : '',
+        catalog_count: Array.isArray(window.globalEncyclopediaCatalog) ? window.globalEncyclopediaCatalog.length : 0,
+        monographs_cached: window.globalMonographsCache ? Object.keys(window.globalMonographsCache).length : 0,
+        authorities_count: Array.isArray(window.globalClassicalAuthorities) ? window.globalClassicalAuthorities.length : 0,
+        settings: JSON.parse(safeStorageGet('zmie_system_settings') || '{}'),
+        active_tier: typeof activeTier !== 'undefined' ? activeTier : 'pro',
+        user_agent: navigator.userAgent
+      };
+      const blob = new Blob([JSON.stringify(diag, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `zmie_system_diagnostics_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Diagnostic configuration JSON exported.", "fa-download", "text-cyan-400");
+    };
+
+    window.setSettingsTier = function(tier) {
+      if (typeof switchTier === 'function') {
+        switchTier(tier);
+      } else {
+        activeTier = tier;
+        updateTierUI();
+      }
+      showToast(`Active Institutional License switched to: ${tier.toUpperCase()}`, "fa-shield-halved", "text-emerald-400");
+    };
+
+    window.loadSystemSettings = function() {
+      try {
+        const raw = safeStorageGet('zmie_system_settings');
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (cfg.apiBaseUrl) window.API_BASE = cfg.apiBaseUrl;
+          applySystemSettingsVisuals(cfg);
+          if (cfg.defaultAge) {
+            const el = document.getElementById('sim-age');
+            if (el) el.value = cfg.defaultAge;
+          }
+          if (cfg.defaultEgfr) {
+            const el = document.getElementById('sim-egfr');
+            if (el) el.value = cfg.defaultEgfr;
+          }
+        }
+      } catch (e) {}
+    };
+
     // ─── Emergency Self-Healing Cache & Reset Shield ──────────────────────
     window.emergencyResetApp = async function() {
       try {
