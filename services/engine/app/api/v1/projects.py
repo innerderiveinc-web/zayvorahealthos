@@ -22,11 +22,15 @@ class AddNotePayload(BaseModel):
 
 
 @router.get("", response_model=List[ResearchProject])
-async def list_user_projects(auth: AuthContext = Depends(SecurityService.get_current_user)):
+async def list_user_projects(auth: AuthContext = Depends(SecurityService.require_authenticated)):
     """
-    Lists research projects belonging to current user/organization.
+    Lists research projects scoped strictly to caller's authenticated tenant/organization.
     """
-    return ProjectWorkspaceService.list_projects()
+    return ProjectWorkspaceService.list_projects(
+        owner_id=auth.user_id,
+        org_id=auth.org_id,
+        is_admin=(auth.role == UserRole.ADMIN)
+    )
 
 
 @router.post("", response_model=ResearchProject)
@@ -46,13 +50,19 @@ async def create_research_project(
 
 
 @router.get("/{project_id}", response_model=ResearchProject)
-async def get_project_details(project_id: str):
+async def get_project_details(
+    project_id: str,
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
     """
     Retrieves full project memory: included studies, excluded reasons, notes, and snapshots.
+    Enforces tenant and owner scoping.
     """
     proj = ProjectWorkspaceService.get_project(project_id)
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
+    if auth.role != UserRole.ADMIN and proj.org_id != auth.org_id and proj.owner_id != auth.user_id:
+        raise HTTPException(status_code=403, detail="Access forbidden: cross-tenant project access denied.")
     return proj
 
 
@@ -60,16 +70,21 @@ async def get_project_details(project_id: str):
 async def add_project_note(
     project_id: str,
     payload: AddNotePayload,
-    auth: AuthContext = Depends(SecurityService.get_current_user)
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
 ):
     """
     Appends a timestamped research note to the project workspace.
+    Enforces tenant ownership before write.
     """
-    proj = ProjectWorkspaceService.add_note(
+    proj = ProjectWorkspaceService.get_project(project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if auth.role != UserRole.ADMIN and proj.org_id != auth.org_id and proj.owner_id != auth.user_id:
+        raise HTTPException(status_code=403, detail="Access forbidden: cannot modify another tenant's project.")
+    
+    updated_proj = ProjectWorkspaceService.add_note(
         project_id=project_id,
         author=auth.user_id,
         content=payload.content
     )
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return proj
+    return updated_proj

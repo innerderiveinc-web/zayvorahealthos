@@ -1574,7 +1574,7 @@ const PUBMED_MESH_DICTIONARY = [
     function openEhrModal() {
       const q = document.getElementById('breadcrumb-topic')?.innerText || 'Clinical Compound';
       const title = document.getElementById('monograph-title')?.innerText || '';
-      const grade = document.getElementById('grade-badge')?.innerText || 'Level 1a';
+      const grade = document.getElementById('grade-badge')?.innerText || 'UNVERIFIED';
       const endpoint = document.getElementById('metric-endpoint')?.innerText || 'Statistically Significant';
       const comparator = document.getElementById('metric-comparator')?.innerText || 'Non-Inferior';
       const dose = document.getElementById('dose-step-1-title')?.innerText || '500 mg QD with meals';

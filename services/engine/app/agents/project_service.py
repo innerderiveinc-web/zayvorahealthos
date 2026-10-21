@@ -55,10 +55,21 @@ class ProjectWorkspaceService:
     }
 
     @classmethod
-    def list_projects(cls, owner_id: Optional[str] = None) -> List[ResearchProject]:
-        if owner_id:
-            return [p for p in cls._PROJECTS.values() if p.owner_id == owner_id]
-        return list(cls._PROJECTS.values())
+    def list_projects(
+        cls,
+        owner_id: Optional[str] = None,
+        org_id: Optional[str] = None,
+        is_admin: bool = False
+    ) -> List[ResearchProject]:
+        if is_admin:
+            return list(cls._PROJECTS.values())
+        results = []
+        for p in cls._PROJECTS.values():
+            if org_id and p.org_id == org_id:
+                results.append(p)
+            elif owner_id and p.owner_id == owner_id:
+                results.append(p)
+        return results
 
     @classmethod
     def get_project(cls, project_id: str) -> Optional[ResearchProject]:

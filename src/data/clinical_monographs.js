@@ -1850,9 +1850,9 @@ const CLINICAL_MONOGRAPHS = {
       const name = compound.transliterated_name || compound.canonical_title || 'Codified Qarabadeen Compound';
       const indications = Array.isArray(compound.primary_indications) ? compound.primary_indications.join(', ') : (compound.primary_indications || 'Codified Clinical Indications');
       const ingredients = Array.isArray(compound.key_ingredients) ? compound.key_ingredients.join(', ') : (compound.key_ingredients || 'Codified Active Botanicals');
-      const dosage = compound.standard_dosage || '3g – 5g twice daily with lukewarm water';
+      const dosage = compound.standard_dosage || 'Standard dosage not codified; clinical consultation required';
       const modern = compound.modern_pharmacology_correlation || 'Codified bioactive constituents verified against modern pharmacopeial monographs.';
-      const safety = compound.safety_and_precautions || 'Standard posology; caution in severe hepatic/renal impairment.';
+      const safety = compound.safety_and_precautions || 'Safety profile not established by clinical trials; clinical caution required in hepatic/renal impairment.';
       const temperament = compound.temperament || 'Mo’tadil (Balanced)';
 
       return {
@@ -4100,7 +4100,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                   <td class="px-3 py-2.5 text-gray-300">${t.design} • <span class="font-mono text-gray-400">${t.sampleSize || ''}</span></td>
                   <td class="px-3 py-2.5 text-gray-300">${t.regimen || 'Active regimen'}</td>
                   <td class="px-3 py-2.5 font-semibold text-teal-300">${t.takeaway ? t.takeaway.slice(0, 75) + '...' : ''}</td>
-                  <td class="px-3 py-2.5 font-mono text-[10px] text-cyan-300">${t.tier || 'Level 1b'}</td>
+                  <td class="px-3 py-2.5 font-mono text-[10px] ${t.tier ? 'text-cyan-300' : 'text-gray-500'}">${t.tier || 'UNVERIFIED'}</td>
                   <td class="px-3 py-2.5">
                     <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${t.robClass}">${t.rob}</span>
                   </td>
@@ -5499,7 +5499,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
         pks = [
           { param: "S-Warfarin Cmax (Concurrent Herb)", val: "0.62 ± 0.12 µg/mL (-42% reduction)", directive: "Precipitates acute subtherapeutic anticoagulation with thrombotic hazard" },
           { param: "Tmax (Warfarin Absorption)", val: "1.5 hours (unaltered)", directive: "Rate of absorption unaffected; metabolic clearance massively upregulated" },
-          { param: "AUC (Area Under Curve 0-72h)", val: "22.4 µg·h/mL (-50% under St. John's Wort)", directive: "High-risk kinetic collapse requiring doubling of anticoagulant dosage" },
+          { param: "AUC (Area Under Curve 0-72h)", val: "22.4 µg·h/mL (-50% under St. John's Wort)", directive: "Critical pharmacokinetic interaction; requires immediate therapeutic drug monitoring (TDM) and specialist cardiology/hematology review; do NOT empirically alter anticoagulant dosage" },
           { param: "t1/2 (Elimination Half-life S-enantiomer)", val: "18.2 hours (reduced from baseline 32h)", directive: "Rapid hepatic clearance via hyperforin-induced CYP2C9 monooxygenase" },
           { param: "INR Trough Deficit", val: "Mean reduction: -1.4 INR points", directive: "Patient drops below therapeutic target (2.0-3.0) into high stroke hazard" },
           { param: "Platelet Aggregation Deficit (Garlic)", val: "Platelet factor 4 inhibited by 38%", directive: "Additive hemorrhagic diathesis independent of laboratory INR values" },
@@ -6522,7 +6522,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       const mono = currentActiveMonograph || CLINICAL_MONOGRAPHS.berberine;
       const q = document.getElementById('search-input')?.value?.trim() || mono.topic || mono.title || 'Clinical Appraisal';
       const text = document.getElementById('synthesis-text')?.innerText || mono.synthesis || '';
-      const grade = document.getElementById('grade-badge')?.innerText || mono.grade || 'Level 1a';
+      const grade = document.getElementById('grade-badge')?.innerText || mono.grade || 'UNVERIFIED';
       const snippet = `[TriMedSearch Clinical Appraisal]\nInquiry: ${q}\nEvidence Level: ${grade}\nSynthesis: ${text}\nVerified Provenance: Merkle HMAC-SHA256 (INV-10)`;
       navigator.clipboard.writeText(snippet).then(() => {
         const copyIcon = document.getElementById('copy-icon');
@@ -6632,7 +6632,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
     function exportMonographRIS() {
       const mono = currentActiveMonograph || CLINICAL_MONOGRAPHS.berberine;
       const q = document.getElementById('search-input')?.value?.trim() || mono.topic || mono.title || 'Clinical Evidence Appraisal';
-      const ris = `TY  - JOUR\nTI  - Systematic Evidence Monograph and Appraisal: ${q}\nJO  - TriMedSearch Institutional Health Sciences Repository\nAU  - TriMedSearch Consensus Board\nPY  - 2026\nDO  - 10.1056/nejmoa2022483\nKW  - ${mono.category || 'Phytopharmacology'}\nKW  - ${mono.topic || q}\nAB  - ${(mono.synthesis || '').replace(/\\n/g, ' ')}\nN1  - Quality Level: ${mono.grade || 'Oxford CEBM Level 1a'}; Merkle Root: ${mono.merkleRoot || 'Verified'}\nER  -\n`;
+      const ris = `TY  - JOUR\nTI  - Systematic Evidence Monograph and Appraisal: ${q}\nJO  - TriMedSearch Institutional Health Sciences Repository\nAU  - TriMedSearch Consensus Board\nPY  - 2026\nDO  - 10.1056/nejmoa2022483\nKW  - ${mono.category || 'Phytopharmacology'}\nKW  - ${mono.topic || q}\nAB  - ${(mono.synthesis || '').replace(/\\n/g, ' ')}\nN1  - Quality Level: ${mono.grade || 'UNVERIFIED'}; Merkle Root: ${mono.merkleRoot || 'Verified'}\nER  -\n`;
       downloadFile("zmie_citation_archive.ris", ris);
       showToast("Downloaded RIS citation archive (.ris) for Zotero/EndNote!", "fa-file-lines", "text-emerald-400");
     }
@@ -6642,7 +6642,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       const q = document.getElementById('search-input')?.value?.trim() || mono.topic || mono.title || 'Clinical Evidence Appraisal';
       const text = document.getElementById('synthesis-text')?.innerText || mono.synthesis || '';
       const merkle = mono.merkleRoot || "ed811124d1fa7de12fc29d9a9f4041ec9a7b729682ff065c9c3c04fc37d9a85d";
-      const md = `# ZMIE Institutional Evidence Dossier\n\n**Inquiry:** ${q}\n**Appraisal Timestamp:** ${new Date().toISOString()}\n**Quality Level:** ${mono.grade || 'Oxford CEBM Level 1a'}\n**Merkle Audit Root:** ${merkle}...\n\n## 1. Appraised Evidence Synthesis\n${text}\n\n## 2. Invariant Adherence\n- Citation Entailment Verification: Passed (INV-01)\n- Epistemic Preservation: Enforced (INV-04)\n- Regulatory Audit Trail: Part 11–Aligned Electronic Record Controls (INV-10)\n`;
+      const md = `# ZMIE Institutional Evidence Dossier\n\n**Inquiry:** ${q}\n**Appraisal Timestamp:** ${new Date().toISOString()}\n**Quality Level:** ${mono.grade || 'UNVERIFIED'}\n**Merkle Audit Root:** ${merkle}...\n\n## 1. Appraised Evidence Synthesis\n${text}\n\n## 2. Invariant Adherence\n- Citation Entailment Verification: Passed (INV-01)\n- Epistemic Preservation: Enforced (INV-04)\n- Regulatory Audit Trail: Part 11–Aligned Electronic Record Controls (INV-10)\n`;
       downloadFile(`zmie_evidence_dossier_${(mono.topic || 'appraisal').toLowerCase().replace(/[^a-z0-9]/g, '_')}.md`, md);
       showToast("Downloaded clinical evidence dossier (.md)!", "fa-file-arrow-down", "text-teal-400");
     }
@@ -6682,7 +6682,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       const mono = currentActiveMonograph || CLINICAL_MONOGRAPHS.berberine;
       const q = document.getElementById('search-input')?.value?.trim() || mono.topic || 'Clinical Appraisal';
       const text = document.getElementById('synthesis-text')?.innerText || mono.synthesis || '';
-      const grade = document.getElementById('grade-badge')?.innerText || mono.grade || 'Oxford Level 1a';
+      const grade = document.getElementById('grade-badge')?.innerText || mono.grade || 'UNVERIFIED';
       const claimsList = (mono.claims && mono.claims.length > 0)
         ? mono.claims.map((c, idx) => ({ id: `CLM-0${idx+1}`, claim: c, confidence: 0.95 }))
         : [
@@ -8288,9 +8288,15 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                       <h3 class="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
                         ${commonName}
                       </h3>
-                      <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-                        ${herb.evidence_grade || 'Level 1a'}
-                      </span>
+                      ${herb.evidence_grade ? `
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+                          ${herb.evidence_grade}
+                        </span>
+                      ` : `
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold bg-gray-900 text-amber-400 border border-amber-800/50" title="Scientific Evidence Not Formally Appraised">
+                          <i class="fa-solid fa-circle-question text-[9px] mr-1"></i>UNVERIFIED
+                        </span>
+                      `}
                       ${['berberine', 'glycyrrhiza', 'curcumin', 'ashwagandha', 'garlic', 'senna', 'ginger', 'guggulu', 'guduchi'].some(k => (herb.key || '').includes(k)) ? `
                         <span class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-rose-950/90 text-rose-300 border border-rose-800/70 shadow-sm" title="Clinical Drug-Herb Interaction Alert: CYP450 / Transporter Hazard">
                           <i class="fa-solid fa-triangle-exclamation text-rose-400 mr-0.5"></i> Rx Alert
@@ -8344,7 +8350,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                       <span class="flex items-center gap-1.5 text-teal-300">
                         <i class="fa-solid fa-dna text-[10px]"></i> Allopathy & Pharmacology
                       </span>
-                      <span class="font-mono text-[10px] text-emerald-400 font-bold">${herb.rct_count || 14} RCTs</span>
+                      <span class="font-mono text-[10px] ${herb.rct_count ? 'text-emerald-400 font-bold' : 'text-gray-500 font-normal'}">${herb.rct_count ? herb.rct_count + ' RCTs' : 'No RCT data'}</span>
                     </div>
                     <div class="text-[10px] text-gray-300">
                       <span class="text-gray-400">Bioactives:</span> <strong class="text-emerald-300">${activePhyto}</strong>
@@ -9168,8 +9174,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                 musleh: h.musleh || 'Traditional corrective vehicle',
                 badal: h.badal || 'Traditional substitute',
                 adulterants: `TLC and microscopic identity conforming to ${h.official_pharmacopoeia || 'UPI / API'}`,
-                contraindications: 'Standard clinical monitoring during pregnancy or organ failure.',
-                adverse_effects: 'Well tolerated when administered within canonical therapeutic dosage and corrected with Musleh.',
+                contraindications: h.contraindications || 'Specific contraindications not established by human clinical trials. Clinical supervision required during pregnancy, lactation, and severe renal or hepatic dysfunction.',
+                adverse_effects: h.adverse_effects || 'Adverse effect and safety profile not established by controlled clinical trials; empirical clinical caution advised.',
                 compound_formulations: [
                   `Sufuf-e-${uClean} (Qarabadeen-e-Azam)`,
                   `Majun-${uClean} (National Formulary of Unani Medicine - NFUM)`
@@ -9185,13 +9191,13 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                   mechanisms: (h.modern_pharmacology && h.modern_pharmacology.mechanisms) || ['Targeted biological response']
                 },
                 clinical_evidence: {
-                  rct_evidence: (h.modern_pharmacology && h.modern_pharmacology.rct_evidence) || 'Indexed in statutory pharmacopoeial compendia.',
-                  rct_count: 14,
-                  evidence_grade: h.evidence_grade || 'Level 1b (Pharmacopoeial Standard)'
+                  rct_evidence: (h.modern_pharmacology && h.modern_pharmacology.rct_evidence) || 'No controlled human RCTs indexed in primary database. Evidence not formally appraised.',
+                  rct_count: (typeof h.rct_count === 'number') ? h.rct_count : 0,
+                  evidence_grade: h.evidence_grade || 'UNVERIFIED (No Formal Appraisal)'
                 },
                 toxicology: {
-                  safety_status: 'Monitored Pharmacopoeial Compliance',
-                  hepatic_renal_profile: 'No adverse organ toxicity reported within therapeutic dosage limits.'
+                  safety_status: 'Pre-appraisal (Pending Systematic Review)',
+                  hepatic_renal_profile: 'Organ toxicity and pharmacokinetic safety data not established by human clinical trials.'
                 },
                 quality_standards: h.quality_standard || `Conforms to ${h.official_pharmacopoeia || 'UPI / API'}`,
                 allopathic_drug_interactions: {
@@ -9552,8 +9558,8 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
                   ${m.modern_pharmacology?.mechanisms ? m.modern_pharmacology.mechanisms[0] : ''}
                 </div>
                 <div class="pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px]">
-                  <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-clipboard-check mr-1"></i> Human RCT Evidence: ${m.clinical_evidence?.rct_count || 18} Trials</span>
-                  <span class="text-cyan-400 font-mono">${m.clinical_evidence?.evidence_grade || 'Level 1b'}</span>
+                  <span class="${m.clinical_evidence?.rct_count ? 'text-emerald-400 font-semibold' : 'text-gray-500 font-normal'}"><i class="fa-solid fa-clipboard-check mr-1"></i> Human RCT Evidence: ${m.clinical_evidence?.rct_count !== undefined && m.clinical_evidence?.rct_count !== null ? m.clinical_evidence.rct_count + ' Trials' : 'No verified trials'}</span>
+                  <span class="${m.clinical_evidence?.evidence_grade ? 'text-cyan-400' : 'text-amber-400'} font-mono">${m.clinical_evidence?.evidence_grade || 'UNVERIFIED'}</span>
                 </div>
                 <div class="text-gray-400 text-[11px] italic">
                   ${m.clinical_evidence?.rct_evidence || ''}
@@ -10148,7 +10154,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
     function copy30SecSummary() {
       const mono = currentActiveMonograph || CLINICAL_MONOGRAPHS.berberine;
       const topic = mono.topic || mono.title || 'Clinical Evaluation';
-      const grade = mono.grade || 'Level 1a';
+      const grade = mono.grade || 'UNVERIFIED';
       const endpoint = (mono.metrics && mono.metrics.endpoint) || 'Clinically meaningful endpoint';
       const dose = (mono.directives && mono.directives[1] && mono.directives[1].text) || 'Standard therapeutic titration with meals.';
       const safety = (mono.directives && mono.directives[2] && mono.directives[2].text) || 'Routine biochemical and renal panel monitoring.';
@@ -10509,13 +10515,13 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       const regEl = document.getElementById('calc-mizaj-regimen');
       if (regEl) {
         if (dom[0] === 'balghami') {
-          regEl.innerHTML = `<strong>Clinical Directives (Balghami Dominance):</strong> Cold &amp; Moist dyscrasia. High predisposition to tissue laxity (Tarkhiya), refractive asthenopia, and slower metabolic clearance. <br><span class="text-amber-300">Prescription:</span> Prescribe dry, warming regimens (Ilaj bil-Didd). Emphasize early morning daylight exposure (&gt;10,000 lux), restrict cold-moist dietary intakes (excess dairy/refined carbs), and recommend neuro-ocular tonic decoctions (Itrifal Muqawwi-e-Basar).`;
+          regEl.innerHTML = `<strong>Traditional Mizaj Semiology (Balghami Dominance - Classical Theory):</strong> Cold &amp; Moist dyscrasia. Traditional texts note tissue laxity (Tarkhiya) and slower metabolic clearance. <br><span class="text-amber-300 font-semibold">Classical Regimen:</span> Historical texts suggest dry, warming dietetics (Ilaj bil-Didd) and daylight exposure. <span class="text-gray-400 text-[11px] block mt-1"><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-500"></i>Educational/historical reference only; requires licensed clinician evaluation.</span>`;
         } else if (dom[0] === 'damawi') {
-          regEl.innerHTML = `<strong>Clinical Directives (Damawi Dominance):</strong> Hot &amp; Moist dyscrasia. High vascular plethora, prone to cephalic congestion and intraocular microvascular tension. <br><span class="text-rose-300">Prescription:</span> Modulate with blood-depurative cooling regimens (Tabreed wa Tanqiyah). Hijama cupping / Fasd (venesection) at C7/Al-Kahil indicated for plethoric headaches and cephalic congestion.`;
+          regEl.innerHTML = `<strong>Traditional Mizaj Semiology (Damawi Dominance - Classical Theory):</strong> Hot &amp; Moist dyscrasia. Traditional texts describe vascular plethora. <br><span class="text-amber-300 font-semibold">Historical Textual Description:</span> Classical codices describe blood-depurative cooling regimens (Tabreed wa Tanqiyah). <span class="text-rose-400 font-semibold block mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Clinical Safety Warning:</span> Historical invasive procedures (Fasd/venesection, wet cupping) require independent surgical certification and platelet/coagulation screening; NOT an automated prescription.`;
         } else if (dom[0] === 'safrawi') {
-          regEl.innerHTML = `<strong>Clinical Directives (Safrawi Dominance):</strong> Hot &amp; Dry dyscrasia. Prone to dry-eye asthenopia, hyper-metabolism, and gastric hyperacidity. <br><span class="text-amber-300">Prescription:</span> Hydration-sparing, cooling dietetics (cucumber, seeds, barley water). Avoid high-dose pungent herbs and excessive direct noon solar glare.`;
+          regEl.innerHTML = `<strong>Traditional Mizaj Semiology (Safrawi Dominance - Classical Theory):</strong> Hot &amp; Dry dyscrasia. Classical texts associate with hyper-metabolism and bile dominance. <br><span class="text-amber-300 font-semibold">Classical Regimen:</span> Traditional cooling dietetics (cucumber, barley water). Avoid unmonitored high-dose pungent botanicals.`;
         } else {
-          regEl.innerHTML = `<strong>Clinical Directives (Saudawi Dominance):</strong> Cold &amp; Dry dyscrasia. Prone to microvascular sclerosis, chronic insomnia, and nervous strain. <br><span class="text-purple-300">Prescription:</span> Oleation (Dal'k with almond oil / Roghan-e-Badam), warm baths, nourishing mucilaginous broths, and nervous relaxants (Ustukhuddus / Lavandula).`;
+          regEl.innerHTML = `<strong>Traditional Mizaj Semiology (Saudawi Dominance - Classical Theory):</strong> Cold &amp; Dry dyscrasia. Classical texts describe atrabilious humor. <br><span class="text-purple-300 font-semibold">Classical Regimen:</span> Traditional soothing oleation (Dal'k with almond oil / Roghan-e-Badam) and nervous relaxants under qualified guidance.`;
         }
       }
 

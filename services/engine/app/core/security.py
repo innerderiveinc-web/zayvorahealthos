@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from app.core.identity import decode_access_token, verify_password
 from app.core.tenancy import TenantContext, DataClassification
 from app.core.authorization import EnterpriseRole, Action, AuthorizationEngine, SubjectAttributes, ResourceAttributes
+from app.platform.gateway import APIGatewayEngine
 
 
 class UserRole(str, Enum):
@@ -71,8 +72,9 @@ class AuthContext(BaseModel):
         )
 
 
-# API Key Header: 'X-ZMIE-API-KEY'
-api_key_header = APIKeyHeader(name="X-ZMIE-API-KEY", auto_error=False)
+# API Key Headers: 'X-ZMIE-API-KEY' and standard 'X-API-Key'
+api_key_header_zmie = APIKeyHeader(name="X-ZMIE-API-KEY", auto_error=False)
+api_key_header_std = APIKeyHeader(name="X-API-Key", auto_error=False)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -85,19 +87,25 @@ API_KEYS_REGISTRY: Dict[str, Dict[str, Any]] = {
 }
 
 
-class SecurityService:
-    @classmethod
-    async def get_current_user(
-        cls,
-        api_key: Optional[str] = Security(api_key_header),
-        bearer: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme)
-    ) -> AuthContext:
-        """
-        Authenticates caller via API key, JWT Bearer token, or defaults to public unauthenticated persona.
-        """
-        # 1. API Key Auth
-        if api_key and api_key in API_KEYS_REGISTRY:
-            meta = API_KEYS_REGISTRY[api_key]
+async def get_current_user(
+    api_key_zmie: Optional[str] = Security(api_key_header_zmie),
+    api_key_std: Optional[str] = Security(api_key_header_std),
+    bearer: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme)
+) -> AuthContext:
+    """
+    Authenticates caller via API key, hashed API gateway key, or cryptographic JWT Bearer token.
+    Fails closed to unauthenticated public persona on any invalid or unrecognized credential.
+    """
+    raw_token = api_key_zmie or api_key_std
+    if not raw_token and bearer and bearer.credentials:
+        raw_token = bearer.credentials.strip()
+        if raw_token.startswith("Bearer "):
+            raw_token = raw_token.replace("Bearer ", "")
+
+    if raw_token:
+        # 1. Check known API key registry
+        if raw_token in API_KEYS_REGISTRY:
+            meta = API_KEYS_REGISTRY[raw_token]
             return AuthContext(
                 user_id=meta["user_id"],
                 org_id=meta["org_id"],
@@ -108,84 +116,92 @@ class SecurityService:
                 enterprise_role=ROLE_BRIDGE_MAP.get(meta["role"])
             )
 
-        # 2. Bearer Token Auth
-        if bearer and bearer.credentials:
-            token = bearer.credentials.strip()
-            if token.startswith("Bearer "):
-                token = token.replace("Bearer ", "")
+        # 2. Check hashed credentials in APIGatewayEngine
+        cred = APIGatewayEngine.authenticate_key(raw_token)
+        if cred:
+            is_admin = (cred.tenant_id == "org-zmie-governance" or "admin" in cred.owner)
+            role = UserRole.ADMIN if is_admin else UserRole.RESEARCHER
+            return AuthContext(
+                user_id=cred.owner,
+                org_id=cred.tenant_id,
+                tenant_id=cred.tenant_id,
+                role=role,
+                is_authenticated=True,
+                tenant_isolated=True,
+                enterprise_role=ROLE_BRIDGE_MAP.get(role)
+            )
 
-            # A. Check if token is in known API key registry
-            if token in API_KEYS_REGISTRY:
-                meta = API_KEYS_REGISTRY[token]
-                return AuthContext(
-                    user_id=meta["user_id"],
-                    org_id=meta["org_id"],
-                    tenant_id=meta.get("tenant_id", meta["org_id"]),
-                    role=meta["role"],
-                    is_authenticated=True,
-                    tenant_isolated=True,
-                    enterprise_role=ROLE_BRIDGE_MAP.get(meta["role"])
-                )
-
-            # B. Try decoding as cryptographic JWT token
+        # 3. Cryptographic JWT Token verification
+        try:
+            claims = decode_access_token(raw_token)
+            user_id = claims.get("sub", claims.get("user_id", "usr-jwt-authenticated"))
+            org_id = claims.get("org_id", claims.get("tenant_id", "org-tenant-default"))
+            tenant_id = claims.get("tenant_id", org_id)
+            raw_role = claims.get("role", "researcher")
+            
             try:
-                claims = decode_access_token(token)
-                user_id = claims.get("sub", claims.get("user_id", "usr-jwt-authenticated"))
-                org_id = claims.get("org_id", claims.get("tenant_id", "org-tenant-default"))
-                tenant_id = claims.get("tenant_id", org_id)
-                raw_role = claims.get("role", "researcher")
+                role_enum = UserRole(raw_role)
+            except ValueError:
+                role_enum = UserRole.RESEARCHER
                 
-                # Resolve UserRole
-                try:
-                    role_enum = UserRole(raw_role)
-                except ValueError:
-                    role_enum = UserRole.RESEARCHER
-                    
-                return AuthContext(
-                    user_id=user_id,
-                    org_id=org_id,
-                    tenant_id=tenant_id,
-                    role=role_enum,
-                    is_authenticated=True,
-                    tenant_isolated=True,
-                    enterprise_role=ROLE_BRIDGE_MAP.get(role_enum)
-                )
-            except Exception:
-                pass  # Fall back to test key string matching for mock test harnesses
+            return AuthContext(
+                user_id=user_id,
+                org_id=org_id,
+                tenant_id=tenant_id,
+                role=role_enum,
+                is_authenticated=True,
+                tenant_isolated=True,
+                enterprise_role=ROLE_BRIDGE_MAP.get(role_enum)
+            )
+        except Exception:
+            pass  # Fall through to unauthenticated default on invalid token
 
-            # C. Fast test harness string match
-            if token == "test-key" or "key" in token:
-                return AuthContext(
-                    user_id="usr-authenticated-test",
-                    org_id="org-authenticated-test",
-                    tenant_id="org-authenticated-test",
-                    role=UserRole.RESEARCHER,
-                    is_authenticated=True,
-                    tenant_isolated=True,
-                    enterprise_role=EnterpriseRole.RESEARCHER
-                )
+    # Default fallback: Public Read-Only Persona (Fails closed)
+    return AuthContext(
+        user_id="usr-anonymous",
+        org_id="org-public-guest",
+        tenant_id="org-public-guest",
+        role=UserRole.PUBLIC,
+        is_authenticated=False,
+        tenant_isolated=True,
+        enterprise_role=EnterpriseRole.READ_ONLY
+    )
 
-        # Default fallback: Public Read-Only Persona
-        return AuthContext(
-            user_id="usr-anonymous",
-            org_id="org-public-guest",
-            tenant_id="org-public-guest",
-            role=UserRole.PUBLIC,
-            is_authenticated=False,
-            tenant_isolated=True,
-            enterprise_role=EnterpriseRole.READ_ONLY
+
+async def require_authenticated(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+    """
+    Dependency enforcing authenticated user context.
+    Fails closed with HTTP 401 if caller is unauthenticated.
+    """
+    if not auth.is_authenticated:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Provide a valid Bearer token or API key."
         )
+    return auth
 
-    @classmethod
-    def require_role(cls, required_roles: list[UserRole]):
-        """
-        Dependency enforcing minimum role requirement.
-        """
-        async def role_checker(auth: AuthContext = Depends(cls.get_current_user)):
-            if auth.role not in required_roles and auth.role != UserRole.ADMIN:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Access forbidden: requires one of {[r.value for r in required_roles]}. Current role: {auth.role.value}"
-                )
-            return auth
-        return role_checker
+
+def require_role(required_roles: list[UserRole]):
+    """
+    Dependency enforcing minimum role requirement.
+    Fails closed with HTTP 401 if unauthenticated, and HTTP 403 if unauthorized.
+    """
+    async def role_checker(auth: AuthContext = Depends(get_current_user)):
+        if not auth.is_authenticated:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required. Provide a valid Bearer token or API key."
+            )
+        if auth.role not in required_roles and auth.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access forbidden: requires one of {[r.value for r in required_roles]}. Current role: {auth.role.value}"
+            )
+        return auth
+    return role_checker
+
+
+class SecurityService:
+    get_current_user = staticmethod(get_current_user)
+    require_authenticated = staticmethod(require_authenticated)
+    require_role = staticmethod(require_role)

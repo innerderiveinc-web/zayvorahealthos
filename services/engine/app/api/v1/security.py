@@ -8,7 +8,7 @@ Provides comprehensive endpoints for:
 - Submitting privacy Data Subject Requests (/v1/security/dsr)
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
@@ -25,6 +25,7 @@ from app.models.security import (
 from app.security.policy_engine import AuthorizationPolicyEngine
 from app.security.consent_engine import ConsentAndPrivacyEngine
 from app.security.audit_engine import AuditLoggingEngine
+from app.core.security import SecurityService, AuthContext, UserRole as CoreUserRole
 
 router = APIRouter(prefix="/security", tags=["Security, Governance & Compliance"])
 
@@ -117,10 +118,14 @@ async def revoke_consent(req: RevokeConsentRequest):
 
 
 @router.get("/audit", response_model=List[Dict[str, Any]])
-async def query_audit_logs(tenant_id: Optional[str] = None, event_type: Optional[str] = None):
+async def query_audit_logs(
+    tenant_id: Optional[str] = None,
+    event_type: Optional[str] = None,
+    auth: AuthContext = Depends(SecurityService.require_role([CoreUserRole.ADMIN]))
+):
     """
     GET /v1/security/audit:
-    Retrieves tamper-resistant audit events.
+    Retrieves tamper-resistant audit events. Protected: Requires PLATFORM_ADMIN role.
     """
     events = AuditLoggingEngine.get_events(tenant_id=tenant_id, event_type=event_type)
     return [e.model_dump() for e in events]

@@ -8,7 +8,7 @@ Exposes enterprise endpoints for:
 - Continuous Retraction & Safety Invalidation logs
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
@@ -21,6 +21,7 @@ from app.sources.discovery import SourceDiscoveryEngine
 from app.sources.search_matrix import MultiSystemSearchMatrixEngine
 from app.sources.retraction_pipeline import RetractionAndSafetyPipeline
 from app.sources.pubmed_client import get_pubmed_client, PubMedArticle
+from app.core.security import SecurityService, AuthContext, UserRole
 
 router = APIRouter(prefix="/sources", tags=["Global Medical Source Universe & Universal Acquisition"])
 
@@ -78,7 +79,10 @@ class ApproveCandidateRequest(BaseModel):
 
 
 @router.post("/discovery/approve", response_model=SourceRecord)
-def approve_candidate(req: ApproveCandidateRequest):
+def approve_candidate(
+    req: ApproveCandidateRequest,
+    auth: AuthContext = Depends(SecurityService.require_role([UserRole.ADMIN, UserRole.RESEARCHER]))
+):
     source = SourceDiscoveryEngine.approve_candidate(req.candidate_id, req.authority_tier)
     if not source:
         raise HTTPException(status_code=404, detail="Candidate not found.")
