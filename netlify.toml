@@ -14,6 +14,16 @@
   to = "/index.html"
   status = 200
 
+# Backend API Proxy (Optional for Static Edge Deployments):
+# By default, ZMIE Workbench functions in offline-first mode using the local client catalog.
+# To connect a Netlify static frontend to an external ZMIE FastAPI backend service
+# (e.g., on Fly.io, AWS, Render, or GCP Cloud Run), uncomment the proxy rule below:
+# [[redirects]]
+#   from = "/v1/*"
+#   to = "https://your-zmie-backend-service.com/v1/:splat"
+#   status = 200
+#   force = true
+
 [[headers]]
   for = "/*"
   [headers.values]

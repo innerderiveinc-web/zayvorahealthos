@@ -88,3 +88,21 @@ Across 66 comprehensive automated test cases, 5 multi-stage showcase scripts, an
   PYTHONPATH=services/engine:sdk/python .venv/bin/python3 tests/truth_firewall_showcase.py
   PYTHONPATH=services/engine:sdk/python .venv/bin/python3 tests/security_governance_showcase.py
   ```
+
+---
+
+## 7. Brutal Audit Remediation Record (21 October 2026)
+
+Following an external static and dynamic audit, the following critical defects (P0) and operational issues were remediated:
+
+| Audit Finding | Prior Defect | Remediation Applied | Verification |
+|---|---|---|---|
+| **Clinical Evidence Interface** | Defaulted unverified herbs to `Level 1a` & 14/18 RCTs; generic monographs with false non-toxicity. | Replaced all fallback defaults in `workbench.html` and `index.html` with explicit `UNVERIFIED` and `No RCT data`. Quarantined prescribing directives (anticoagulant doubling, cupping/venesection). | Byte parity confirmed (`cmp`); 0 fabricated fallback claims. |
+| **Authentication & Isolation Bypass** | Bearer token with substring `key` authenticated as researcher; public admin routes. | Removed bypass token shortcut and hardcoded demo keys in `security.py`. Added server-side auth/role dependencies (`require_authenticated()`, `require_role()`). Scoped project queries to caller tenant. | `tests/test_audit_remediation_auth.py` (6/6 passing). |
+| **Secret Exposure in Distribution** | `.env` containing local secrets present in ZIP bundle. | Permanently removed `.env` from all ZIP bundles. Retained sanitized `.env.example`. | Archive inspection confirmed 0 secret files in distribution. |
+| **LLM Gateway Synthesis** | Fallback returned synthetic positive human trials on outage; API key in URL query parameter. | Fail-closed synthesis returning `[MODEL_UNAVAILABLE]`. Migrated auth to `x-goog-api-key` header. Added zero-trust PHI egress checks and Pydantic schema validation. | `tests/test_audit_remediation_llm.py` (3/3 passing). |
+| **Audit Ledger Verification Loophole** | Block hash omitted state/metadata; allowed genesis block hash at arbitrary points. | Hashed all fields (`previous_state`, `new_state`, `metadata`). Restricted genesis hash strictly to block 0. SQLite audit store made append-only. | `tests/test_audit_remediation_ledger.py` (4/4 passing). |
+| **Reproducible Docker & Packaging** | Broken COPY paths in `Dockerfile`; omitted seed data and runtime HTML. | Fixed build context to repository root. Added `catalog_seed.json`, `workbench.html`, `index.html`, `sw.js`, `minio`, and `pgvector`. | Verified Dockerfile syntax and path alignment. |
+| **Vulnerable Next.js Dependency** | Pinned Next.js 15.0.0 vulnerable to CVE-2025-66478. | Upgraded `next` to `^15.1.7` in `services/web/package.json`. | Dependency manifest updated. |
+| **Service Worker Data Leak** | Offline worker cached private `/v1/` routes; contained missing precache URLs. | Upgraded `sw.js` to v8; explicitly exempted `/v1/` and `/api/` from client caching. | PWA offline audit verified. |
+
