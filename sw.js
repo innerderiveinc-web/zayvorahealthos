@@ -1,12 +1,11 @@
 // ZMIE Progressive Web App (PWA) Offline-First Service Worker
-// Version 7.0 - Production Resilient (657 Botanical Pharmacopoeia & Classical Corpus)
-const CACHE_NAME = 'zmie-v7-offline-cache';
+// Version 8.0 - Hardened (Zero Private API Caching & Verified Precache URLs)
+const CACHE_NAME = 'zmie-v8-offline-cache';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/workbench',
-  '/catalog_seed.json?v=657_v2',
-  '/services/data/qarabadeen_master_library.json'
+  '/catalog_seed.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,6 +36,14 @@ self.addEventListener('fetch', (event) => {
   
   // Skip non-http schemes (e.g. chrome-extension, data:)
   if (!event.request.url.startsWith('http')) return;
+
+  const url = new URL(event.request.url);
+
+  // SECURITY: Strictly exclude dynamic/authenticated API routes from offline browser cache
+  // Prevents private research projects, patient notes, or audit records from being cached
+  if (url.pathname.startsWith('/v1/') || url.pathname.startsWith('/api/')) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

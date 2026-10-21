@@ -62,6 +62,35 @@ class AuditEvent(BaseModel):
     signature: Optional[str] = None
 
 
+def compute_event_block_hash(event: AuditEvent) -> str:
+    """
+    Computes deterministic SHA-256 block hash covering all canonical event fields,
+    including state transitions (previous_state, new_state) and metadata.
+    """
+    def _canon_json(v: Any) -> str:
+        if v is None:
+            return ""
+        return json.dumps(v, sort_keys=True, separators=(',', ':'), default=str)
+
+    components = [
+        str(event.event_id),
+        str(event.actor),
+        str(event.actor_type.value if hasattr(event.actor_type, "value") else event.actor_type),
+        str(event.tenant_id),
+        str(event.object_type),
+        str(event.object_id),
+        str(event.action.value if hasattr(event.action, "value") else event.action),
+        event.timestamp.isoformat(),
+        str(event.prev_hash),
+        str(event.provenance_ref or ""),
+        _canon_json(event.previous_state),
+        _canon_json(event.new_state),
+        _canon_json(event.metadata)
+    ]
+    payload_str = ":".join(components)
+    return hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+
+
 class AuditDispatcher:
     """Enterprise Audit Engine managing cryptographic hash chains."""
     def __init__(self, load_persisted: Optional[bool] = None):
@@ -136,13 +165,8 @@ class AuditDispatcher:
             prev_hash=prev_h
         )
 
-        # Compute SHA-256 block hash over canonical payload
-        payload_str = (
-            f"{event.event_id}:{event.actor}:{event.tenant_id}:{event.object_type}:"
-            f"{event.object_id}:{event.action.value}:{event.timestamp.isoformat()}:"
-            f"{event.prev_hash}:{event.provenance_ref}"
-        )
-        block_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+        # Compute SHA-256 block hash over all canonical fields
+        block_hash = compute_event_block_hash(event)
         event.block_hash = block_hash
 
         # HMAC signature using system audit key
@@ -170,22 +194,22 @@ class AuditDispatcher:
     def verify_integrity(self) -> bool:
         """
         Verifies that no block has been altered, deleted, or inserted out of order.
+        Enforces strict sequence continuity and covers all payload fields.
         """
         expected_prev = "GENESIS_BLOCK_00000000000000000000000000000000"
         settings = get_settings()
 
-        for event in self._chain:
-            # 1. Verify previous hash link (matches previous block or starts a valid audit epoch)
-            if event.prev_hash != expected_prev and event.prev_hash != "GENESIS_BLOCK_00000000000000000000000000000000":
-                return False
+        for idx, event in enumerate(self._chain):
+            # 1. Strictly verify prev_hash: genesis is ONLY valid for block 0
+            if idx == 0:
+                if event.prev_hash != "GENESIS_BLOCK_00000000000000000000000000000000":
+                    return False
+            else:
+                if event.prev_hash != expected_prev:
+                    return False
 
-            # 2. Recompute block hash
-            payload_str = (
-                f"{event.event_id}:{event.actor}:{event.tenant_id}:{event.object_type}:"
-                f"{event.object_id}:{event.action.value}:{event.timestamp.isoformat()}:"
-                f"{event.prev_hash}:{event.provenance_ref}"
-            )
-            recomputed_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+            # 2. Recompute block hash over complete canonical record
+            recomputed_hash = compute_event_block_hash(event)
             if event.block_hash != recomputed_hash:
                 return False
 

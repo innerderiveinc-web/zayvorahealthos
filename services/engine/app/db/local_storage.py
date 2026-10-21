@@ -95,26 +95,30 @@ class LocalPersistentStore:
 
     # --- Audit Operations ---
     def save_audit_event(self, event_dict: Dict[str, Any]):
+        """Appends an immutable audit event. Duplicate event_ids are rejected to prevent record mutation."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO audit_chain 
-                (event_id, actor, tenant_id, object_type, object_id, action, block_hash, prev_hash, signature, timestamp, payload_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                event_dict.get("event_id"),
-                event_dict.get("actor"),
-                event_dict.get("tenant_id"),
-                event_dict.get("object_type"),
-                event_dict.get("object_id"),
-                event_dict.get("action"),
-                event_dict.get("block_hash"),
-                event_dict.get("prev_hash"),
-                event_dict.get("signature"),
-                str(event_dict.get("timestamp")),
-                json.dumps(event_dict, default=str)
-            ))
-            conn.commit()
+            try:
+                cursor.execute("""
+                    INSERT INTO audit_chain 
+                    (event_id, actor, tenant_id, object_type, object_id, action, block_hash, prev_hash, signature, timestamp, payload_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    event_dict.get("event_id"),
+                    event_dict.get("actor"),
+                    event_dict.get("tenant_id"),
+                    event_dict.get("object_type"),
+                    event_dict.get("object_id"),
+                    event_dict.get("action"),
+                    event_dict.get("block_hash"),
+                    event_dict.get("prev_hash"),
+                    event_dict.get("signature"),
+                    str(event_dict.get("timestamp")),
+                    json.dumps(event_dict, default=str)
+                ))
+                conn.commit()
+            except sqlite3.IntegrityError:
+                pass  # Disallow overwriting/mutation of existing audit records
 
     def load_audit_chain(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
@@ -128,16 +132,19 @@ class LocalPersistentStore:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             now = datetime.utcnow().isoformat() + "Z"
+            created_at = job_dict.get("created_at") or now
             cursor.execute("""
                 INSERT OR REPLACE INTO research_jobs
-                (job_id, primary_question, state, plan_json, report_json, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (job_id, primary_question, state, pico_json, plan_json, report_json, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_id,
                 question,
                 state,
+                json.dumps(job_dict.get("pico", {}), default=str),
                 json.dumps(job_dict.get("plan", {}), default=str),
                 json.dumps(job_dict.get("report", {}), default=str) if job_dict.get("report") else None,
+                created_at,
                 now
             ))
             conn.commit()
@@ -145,7 +152,7 @@ class LocalPersistentStore:
     def load_all_research_jobs(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT job_id, primary_question, state, plan_json, report_json FROM research_jobs")
+            cursor.execute("SELECT job_id, primary_question, state, pico_json, plan_json, report_json, created_at, updated_at FROM research_jobs")
             rows = cursor.fetchall()
             results = []
             for r in rows:
@@ -153,7 +160,10 @@ class LocalPersistentStore:
                     "job_id": r["job_id"],
                     "question": r["primary_question"],
                     "state": r["state"],
+                    "pico": json.loads(r["pico_json"]) if r["pico_json"] else {},
                     "plan": json.loads(r["plan_json"]) if r["plan_json"] else {},
-                    "report": json.loads(r["report_json"]) if r["report_json"] else None
+                    "report": json.loads(r["report_json"]) if r["report_json"] else None,
+                    "created_at": r["created_at"],
+                    "updated_at": r["updated_at"]
                 })
             return results
