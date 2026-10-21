@@ -1,11 +1,15 @@
 """
-ZMIE Multi-Model LLM Gateway
+ZMIE Multi-Model LLM Gateway & Data Egress Guard
 Provides vendor-agnostic interface supporting:
-1. Google Gemini (Gemini 1.5 Flash / Pro via authenticated GEMINI_API_KEY)
+1. Google Gemini (Gemini 1.5 Flash / Pro via authenticated header x-goog-api-key)
 2. Anthropic Claude (Claude 3.5 Sonnet)
-3. OpenAI (GPT-4o)
-4. Local / Self-Hosted Bio-LLMs (via vLLM / Ollama)
-Enforces strict JSON schema validation via Pydantic to ensure zero-hallucination structured extraction.
+3. Local / Self-Hosted Bio-LLMs (via vLLM / Ollama)
+
+Enforces:
+- Strict Pydantic JSON schema validation (zero unvalidated model_construct mock bypasses)
+- Zero-Trust Data Egress boundaries (default-deny for RESTRICTED/PHI data)
+- Fail-Closed scientific consensus (never asserts fake human trials or positive claims on failure)
+- No credentials in URL query parameters
 """
 
 import os
@@ -20,10 +24,24 @@ from app.core.config import get_settings
 logger = logging.getLogger("zmie.core.llm_gateway")
 
 
+class ModelUnavailableError(Exception):
+    """Raised when an external model provider is unavailable or unconfigured."""
+    pass
+
+
+class ExtractionFailedError(Exception):
+    """Raised when structured data extraction fails schema validation or model error."""
+    pass
+
+
+class DataEgressViolationError(Exception):
+    """Raised when data egress policy prohibits transmission to third-party model provider."""
+    pass
+
+
 class LLMGateway:
     """
-    Abstracts model provider selection and manages fallback reasoning strategies.
-    Integrates directly with Google Gemini for high-throughput multimodal medical synthesis.
+    Abstracts model provider selection, enforces data egress compliance, and manages fail-closed reasoning.
     """
 
     GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
@@ -42,19 +60,47 @@ class LLMGateway:
         return bool(key and len(key.strip()) > 20 and "..." not in key)
 
     @classmethod
+    def check_data_egress_authorization(
+        cls,
+        data: str,
+        classification: Optional[str] = "PUBLIC",
+        tenant_allows_external_ai: bool = True
+    ) -> bool:
+        """
+        Enforces Zero-Trust data egress boundaries before dispatch to commercial model APIs.
+        Default-deny for RESTRICTED, PHI, or non-consented tenant data.
+        """
+        if not tenant_allows_external_ai:
+            raise DataEgressViolationError("Tenant configuration prohibits external AI model egress.")
+        if classification and classification.upper() in ("RESTRICTED", "PHI", "CONFIDENTIAL", "HIGHLY_CONFIDENTIAL"):
+            raise DataEgressViolationError(
+                f"Data classification '{classification}' prohibits third-party LLM transmission."
+            )
+        return True
+
+    @classmethod
     def generate_synthesis(
         cls,
         query: str,
         evidence_context: str,
-        system_instruction: Optional[str] = None
+        system_instruction: Optional[str] = None,
+        classification: Optional[str] = "PUBLIC"
     ) -> str:
         """
         Synthesizes clinical evidence into an authoritative, humanized medical consensus.
-        Falls back cleanly to grounded deterministic summary if offline or unconfigured.
+        Fails closed with an explicit diagnostic message if models are offline or unconfigured;
+        never fabricates clinical evidence or human trials.
         """
+        # 1. Enforce data egress policy
+        try:
+            cls.check_data_egress_authorization(f"{query} {evidence_context}", classification=classification)
+        except DataEgressViolationError as e:
+            return f"[EGRESS_BLOCKED] Outbound model transmission prohibited: {str(e)}"
+
         settings = get_settings()
         gemini_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
 
+        # 2. Attempt Google Gemini via secure header
         if gemini_key:
             try:
                 sys_prompt = system_instruction or (
@@ -77,11 +123,17 @@ class LLMGateway:
                     }
                 }
 
+                # Secure header authentication (no keys in URL query params)
+                headers = {
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": gemini_key
+                }
+
                 with httpx.Client(timeout=6.0) as client:
                     resp = client.post(
-                        f"{cls.GEMINI_API_ENDPOINT}?key={gemini_key}",
+                        cls.GEMINI_API_ENDPOINT,
                         json=payload,
-                        headers={"Content-Type": "application/json"}
+                        headers=headers
                     )
                     if resp.status_code == 200:
                         data = resp.json()
@@ -91,9 +143,9 @@ class LLMGateway:
                             if parts and "text" in parts[0]:
                                 return parts[0]["text"].strip()
             except Exception as e:
-                logger.info("Live Gemini generation bypassed (%s). Using verified deterministic synthesis.", str(e))
+                logger.info("Live Gemini generation failed or bypassed (%s).", str(e))
 
-        # 2. Attempt Anthropic Claude if configured
+        # 3. Attempt Anthropic Claude if configured
         if cls.is_anthropic_configured():
             try:
                 anthropic_key = settings.ANTHROPIC_API_KEY or os.getenv("ANTHROPIC_API_KEY")
@@ -117,10 +169,10 @@ class LLMGateway:
             except Exception as e:
                 logger.info("Live Anthropic Claude generation bypassed (%s).", str(e))
 
-        # Grounded fallback
+        # 4. Fail-closed scientific fallback: Zero fabricated human trials
         return (
-            f"Clinical appraisal corroborates multi-scale physiological mechanisms for '{query}' "
-            f"across verified human trials with deterministic epistemic calibration."
+            f"[MODEL_UNAVAILABLE] Live evidence synthesis is currently offline for query '{query}'. "
+            f"No clinical claims or human trial outcomes are asserted without verified provider execution."
         )
 
     @classmethod
@@ -128,24 +180,58 @@ class LLMGateway:
         cls,
         prompt: str,
         response_model: Type[BaseModel],
-        model_name: Optional[str] = None
+        model_name: Optional[str] = None,
+        classification: Optional[str] = "PUBLIC"
     ) -> BaseModel:
         """
         Extracts Pydantic-validated structured facts from raw biomedical text.
+        Fails closed with ExtractionFailedError if model is unconfigured, provider fails, or validation fails.
+        Never bypasses Pydantic schema validation.
         """
+        cls.check_data_egress_authorization(prompt, classification=classification)
         settings = get_settings()
-        api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        gemini_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
 
-        if not api_key:
-            return cls._fallback_mock_response(response_model)
+        if not gemini_key:
+            raise ExtractionFailedError(
+                f"EXTRACTION_FAILED: No active model provider configured to execute structured extraction for {response_model.__name__}."
+            )
 
-        # In production, dispatch with schema constraint enforcement
-        return cls._fallback_mock_response(response_model)
+        schema_json = json.dumps(response_model.model_json_schema())
+        system_instruction = (
+            f"You are a biomedical structured data extractor. Extract data strictly conforming to this JSON schema: {schema_json}. "
+            f"Output pure JSON only with no conversational text or markdown code blocks."
+        )
 
-    @classmethod
-    def _fallback_mock_response(cls, model_cls: Type[BaseModel]) -> BaseModel:
-        """Instantiates a validated mock instance for schema integrity."""
-        try:
-            return model_cls.model_construct()
-        except Exception:
-            return None
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_instruction}\n\nBiomedical Content:\n{prompt}"}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json"
+            }
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": gemini_key
+        }
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.post(cls.GEMINI_API_ENDPOINT, json=payload, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                        return response_model.model_validate_json(raw_text)
+                raise ExtractionFailedError(f"EXTRACTION_FAILED: Provider returned HTTP {resp.status_code}")
+            except Exception as e:
+                if isinstance(e, ExtractionFailedError):
+                    raise
+                raise ExtractionFailedError(f"EXTRACTION_FAILED: {str(e)}") from e
