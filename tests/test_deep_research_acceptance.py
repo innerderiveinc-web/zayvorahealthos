@@ -180,13 +180,20 @@ class TestDeepResearchLayerAcceptance(unittest.TestCase):
         self.assertIn("Evidence shift", diff.diff_summary)
 
     def test_08_api_endpoints(self):
-        """Tests FastAPI /v1/research REST endpoints."""
-        # 1. Create job
+        """Tests FastAPI /v1/research REST endpoints with fail-closed authentication."""
+        # 0. Unauthenticated creation fails closed with 401
+        unauth_resp = self.client.post("/v1/research/jobs", json={
+            "question": "Unauthenticated test query",
+            "execute_immediately": False
+        })
+        self.assertEqual(unauth_resp.status_code, 401)
+
+        # 1. Authenticated creation succeeds
         resp = self.client.post("/v1/research/jobs", json={
             "question": "What is the therapeutic mechanism and safety of Curcumin in Osteoarthritis?",
             "systems": ["modern", "ayurveda"],
             "execute_immediately": True
-        })
+        }, headers={"X-API-Key": "zmie-res-key-9921"})
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         job_id = data["job_id"]

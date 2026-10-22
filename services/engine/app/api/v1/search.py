@@ -8,12 +8,13 @@ Provides complete versioned endpoints for:
 - Preserves backwards-compatibility for existing GET /search endpoints
 """
 
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Query, HTTPException, Body, Depends
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
 from app.search.search_modes import SearchModeOrchestrator, SearchModeResult
 from app.search.state_manager import SearchStateManager, SearchSnapshot, SavedSearchRecord, SearchAlertSubscription
+from app.core.security import SecurityService, AuthContext
 
 router = APIRouter(prefix="/search", tags=["Search & Retrieval Intelligence"])
 
@@ -197,19 +198,22 @@ async def diff_snapshots(snapshot_id: str, compare_to_id: str = Query(..., descr
 # -----------------------------------------------------------------------------
 
 @router.get("/history")
-async def get_user_search_history(user_id: str = Query("USR-DEFAULT")):
-    return state_manager.get_history(user_id)
+async def get_user_search_history(auth: AuthContext = Depends(SecurityService.require_authenticated)):
+    return state_manager.get_history(auth.user_id)
 
 
 @router.get("/saved")
-async def get_saved_searches(user_id: str = Query("USR-DEFAULT")):
-    return state_manager.get_saved_searches(user_id)
+async def get_saved_searches(auth: AuthContext = Depends(SecurityService.require_authenticated)):
+    return state_manager.get_saved_searches(auth.user_id)
 
 
 @router.post("/saved")
-async def save_search(req: SearchQueryRequest):
+async def save_search(
+    req: SearchQueryRequest,
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
     return state_manager.save_search(
-        user_id=req.user_id or "USR-DEFAULT",
+        user_id=auth.user_id,
         query=req.query,
         mode=req.mode,
         filters=req.filters
@@ -217,14 +221,17 @@ async def save_search(req: SearchQueryRequest):
 
 
 @router.get("/alerts")
-async def get_search_alerts(user_id: str = Query("USR-DEFAULT")):
-    return state_manager.get_alerts(user_id)
+async def get_search_alerts(auth: AuthContext = Depends(SecurityService.require_authenticated)):
+    return state_manager.get_alerts(auth.user_id)
 
 
 @router.post("/alerts")
-async def create_search_alert(req: AlertRequest):
+async def create_search_alert(
+    req: AlertRequest,
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
     return state_manager.create_alert(
-        user_id=req.user_id or "USR-DEFAULT",
+        user_id=auth.user_id,
         topic=req.query_topic,
         min_level=req.min_evidence_level or "E6_controlled_clinical_evidence"
     )

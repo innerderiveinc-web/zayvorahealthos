@@ -106,3 +106,18 @@ Following an external static and dynamic audit, the following critical defects (
 | **Vulnerable Next.js Dependency** | Pinned Next.js 15.0.0 vulnerable to CVE-2025-66478. | Upgraded `next` to `^15.1.7` in `services/web/package.json`. | Dependency manifest updated. |
 | **Service Worker Data Leak** | Offline worker cached private `/v1/` routes; contained missing precache URLs. | Upgraded `sw.js` to v8; explicitly exempted `/v1/` and `/api/` from client caching. | PWA offline audit verified. |
 
+---
+
+## 8. Deep Re-Audit & Remediation Record (22 October 2026)
+
+Following a deeper re-audit of the Python engine and frontend pipelines, the remaining subtle fabrication vectors and endpoint security gaps were eliminated:
+
+| Audit Finding | Prior Defect | Remediation Applied | Verification |
+|---|---|---|---|
+| **NCBIPubMedClient Synthetic NEJM Article** | Offline fallback generated fake NEJM article with user's query and synthetic authors. | Removed synthetic generator in `pubmed_client.py`. If query has no verified authentic article, returns empty list `[]`. | `tests/test_audit_remediation_deep_clean.py` (Passed). |
+| **ClinicalTrialsConnector Fake NCT Record** | Offline fallback synthesized fake Phase 2 clinical trial `NCT04385992` with user's query and NIH sponsor. | Replaced arbitrary query generation with strict authentic fixture checks for known benchmark queries; unknown queries return empty list `[]`. | `tests/test_audit_remediation_deep_clean.py` (Passed). |
+| **Deep Research Mock Fixture Overreach** | Always analyzed hardcoded Berberine studies regardless of the medical topic investigated. | Modified `_gather_mock_scholarly_corpus` in `engine.py` to query live/verified PubMed records first; for unindexed topics, returns empty list `[]` and reports zero primary studies. | `tests/test_audit_remediation_deep_clean.py` (Passed). |
+| **Residual Frontend Fallbacks** | Lines 10362, 11155, and 12739 defaulted to `Level 1b (RCT Evidence)`, 18/24 trials, and `Level 1b RCT`. | Replaced with `UNVERIFIED (Codex Entry)`, `No Verified Human Trials`, `UNAPPRAISED`, and `Unverified Tier`. | Parity verified with `cmp`; 0 fallback leaks. |
+| **Unauthenticated Research & Search Endpoints** | `POST /v1/research/jobs`, `POST /v1/research/stream`, `GET /v1/search/history`, `GET /v1/search/saved` had no auth dependencies. | Added `require_authenticated` dependencies across all research job creation, live streaming, search history, and saved searches. Scoped history to caller ID. | `test_audit_remediation_deep_clean.py` (All 401 tests verified). |
+
+

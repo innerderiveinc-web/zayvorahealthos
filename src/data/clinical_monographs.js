@@ -871,9 +871,9 @@ const CLINICAL_MONOGRAPHS = {
       if (reportObj?.reproducibility_hash) merkle = reportObj.reproducibility_hash;
       else if (nsObj?.reproducibility_hash) merkle = nsObj.reproducibility_hash;
 
-      const trialCount = searchApiData?.evidence_breakdown?.human_rcts || (isNonPharm ? 24 : 18);
-      const trialBadgeText = isNonPharm ? `${trialCount} Clinical Cohorts & Trials Evaluated` : `${trialCount} Human Trials Evaluated`;
-      const evidenceGradeText = searchApiData?.evidence_breakdown?.overall_grade || `Level 1b (Systematic Evidence) • ${elapsed}ms`;
+      const trialCount = searchApiData?.evidence_breakdown?.human_rcts ?? 0;
+      const trialBadgeText = trialCount > 0 ? (isNonPharm ? `${trialCount} Clinical Cohorts Evaluated` : `${trialCount} Human Trials Evaluated`) : 'No Verified Human Trials';
+      const evidenceGradeText = searchApiData?.evidence_breakdown?.overall_grade || `UNVERIFIED • ${elapsed}ms`;
 
       // 1. OPHTHALMOLOGY: Zoaf-e-Basaarat & Myopia in Mizaj
       if (domain === 'OPHTHALMOLOGY') {
@@ -1664,19 +1664,19 @@ const CLINICAL_MONOGRAPHS = {
       const botName = bot.botanical_name || seed.key || 'Botanical Entity';
       const commonName = (seed.synonyms && seed.synonyms.length) ? seed.synonyms[0] : (seed.key ? (seed.key.charAt(0).toUpperCase() + seed.key.slice(1)) : 'Botanical');
       const urduName = seed.arabic_persian_urdu_name || commonName;
-      const grade = (seed.clinical_evidence && seed.clinical_evidence.evidence_grade) || 'Level 1b (RCT Evidence)';
-      const rctText = (seed.clinical_evidence && seed.clinical_evidence.rct_evidence) || 'Clinical trials demonstrate therapeutic efficacy within verified therapeutic dosage.';
+      const grade = (seed.clinical_evidence && seed.clinical_evidence.evidence_grade) || 'UNVERIFIED (Codex Entry)';
+      const rctText = (seed.clinical_evidence && seed.clinical_evidence.rct_evidence) || 'No verified modern RCT data recorded in codex.';
       const quality = seed.quality_standards || 'Official Statutory Pharmacopoeial Standards (UPI / API)';
-      const dosage = seed.dosage || 'Standard clinical therapeutic dosage as indicated in pharmacopoeia';
+      const dosage = seed.dosage || 'Dosage must be determined by qualified clinician from statutory pharmacopoeia';
       const prep = seed.method_of_preparation || 'Canonical pharmaceutical preparation (Tarkeeb / Shodhana)';
       const musleh = seed.musleh || 'Traditional corrective vehicle (Musleh)';
       const badal = seed.badal || 'Classical therapeutic alternative (Badal)';
-      const contraindications = seed.contraindications || 'Documented hypersensitivity or marked organ insufficiency';
-      const adverse = seed.adverse_effects || 'Mild gastrointestinal discomfort in sensitive temperaments';
+      const contraindications = seed.contraindications || 'Contraindications not clinically established — practitioner consultation mandatory';
+      const adverse = seed.adverse_effects || 'Adverse effects profile not systematically established';
       const nti = seed.allopathic_drug_interactions || {};
-      const hazard = nti.overall_clinical_hazard_level || 'MONITORED_CO_PRESCRIPTION';
-      const washout = nti.mandatory_washout_period_days || 5;
-      const advisory = nti.physician_clinical_advisory || 'Screen for narrow-index co-prescriptions before escalating dose.';
+      const hazard = nti.overall_clinical_hazard_level || 'UNAPPRAISED';
+      const washout = nti.mandatory_washout_period_days || null;
+      const advisory = nti.physician_clinical_advisory || 'Drug-herb interaction risk unappraised; screen co-prescriptions with clinical pharmacist.';
 
       const trials = (seed.classical_references && Array.isArray(seed.classical_references.level_1_classical_sources) && seed.classical_references.level_1_classical_sources.length > 0) ? 
         seed.classical_references.level_1_classical_sources.map((src, idx) => ({
@@ -3248,7 +3248,7 @@ ${Array.isArray(p.checklist) ? p.checklist.map(c => `- [x] ${c}`).join('\n') : '
       const idEl = document.getElementById('popover-citation-id');
       if (idEl) idEl.innerText = cData.id || citationId;
       const tierEl = document.getElementById('popover-citation-tier');
-      if (tierEl) tierEl.innerText = cData.tier || 'Level 1b RCT';
+      if (tierEl) tierEl.innerText = cData.tier || 'Unverified Tier';
       const titleEl = document.getElementById('popover-citation-title');
       if (titleEl) titleEl.innerText = cData.title || '';
       const authEl = document.getElementById('popover-citation-authors');

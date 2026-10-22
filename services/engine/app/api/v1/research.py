@@ -12,7 +12,7 @@ Provides comprehensive endpoints for:
 
 import json
 import asyncio
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -29,6 +29,7 @@ from app.models.research import (
 )
 from app.research.engine import DeepResearchOperatingEngine
 from app.agents.orchestrator import DeepResearchAgent, DeepResearchReport
+from app.core.security import SecurityService, AuthContext
 
 router = APIRouter(prefix="/research", tags=["Research Workbench & Deep Investigation"])
 
@@ -52,7 +53,10 @@ class DiffRequest(BaseModel):
 
 @router.post("", response_model=Dict[str, Any])
 @router.post("/jobs", response_model=Dict[str, Any])
-async def create_research_job(req: CreateResearchRequest):
+async def create_research_job(
+    req: CreateResearchRequest,
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
     """
     POST /v1/research or /v1/research/jobs:
     Initiates a new research job, extracts PICO, builds pre-flight ResearchPlan,
@@ -91,7 +95,10 @@ async def list_research_jobs():
 
 
 @router.post("/stream")
-async def stream_research_investigation(req: CreateResearchRequest):
+async def stream_research_investigation(
+    req: CreateResearchRequest,
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
     """
     POST /v1/research/stream:
     Server-Sent Events (SSE) streaming endpoint for live research investigations.

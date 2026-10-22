@@ -301,20 +301,9 @@ class NCBIPubMedClient:
                 )
             ]
         
-        # Generic deterministic fallback
-        return [
-            PubMedArticle(
-                pmid="30252635",
-                title=f"Clinical Evidence & Mechanistic Appraisal: {query.strip().title()}",
-                journal="The New England Journal of Medicine / PubMed Central",
-                pub_date="2024",
-                authors=["National Library of Medicine Consensus Panel"],
-                doi="10.1056/NEJMoa2022483",
-                url=f"https://pubmed.ncbi.nlm.nih.gov/?term={query.replace(' ', '+')}",
-                source_registry="SRC-PUBMED",
-                verified=True
-            )
-        ]
+        # Zero-fabrication: if no authentic match in verified corpus, return empty list
+        logger.warning("No verified peer-reviewed articles found for query: %s", query)
+        return []
 
 
 _client_instance: Optional[NCBIPubMedClient] = None
