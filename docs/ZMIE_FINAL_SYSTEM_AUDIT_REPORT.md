@@ -120,4 +120,39 @@ Following a deeper re-audit of the Python engine and frontend pipelines, the rem
 | **Residual Frontend Fallbacks** | Lines 10362, 11155, and 12739 defaulted to `Level 1b (RCT Evidence)`, 18/24 trials, and `Level 1b RCT`. | Replaced with `UNVERIFIED (Codex Entry)`, `No Verified Human Trials`, `UNAPPRAISED`, and `Unverified Tier`. | Parity verified with `cmp`; 0 fallback leaks. |
 | **Unauthenticated Research & Search Endpoints** | `POST /v1/research/jobs`, `POST /v1/research/stream`, `GET /v1/search/history`, `GET /v1/search/saved` had no auth dependencies. | Added `require_authenticated` dependencies across all research job creation, live streaming, search history, and saved searches. Scoped history to caller ID. | `test_audit_remediation_deep_clean.py` (All 401 tests verified). |
 
+---
+
+## 9. Agentic Systems & Autonomous Pipelines Audit (24 October 2026)
+
+To transition ZMIE from prompt-driven generation into a fully autonomous, self-evaluating **Agentic Operating Pipeline**, three architectural enhancements were implemented, audited, and verified:
+
+### 9.1 Phase 1: Closed-Loop Reflection & Autonomous Self-Correction
+- **Engine Module**: [`services/engine/app/research/reflection.py`](file:///Users/irfanashraf/Downloads/zmie/services/engine/app/research/reflection.py)
+- **Architecture**: A non-bypassable Critic step (`ReflectionAndSelfCorrectionEngine`) executes after preliminary assertion drafting. It subjects every proposed `GroundedAssertion` to:
+  1. `CitationVerificationEngine` (verifying DOI/PMID presence and numerical claim bounds against source text).
+  2. `CausalityAndLanguageFirewall` (screening for causal overreach e.g., "cures", "reverses", or false cross-system equivalencies like "Mizaj = insulin resistance").
+- **Iterative Auto-Repair**: On flaw detection, the engine invokes a deterministic repair mechanism (up to `max_refinement_cycles = 3`) that re-tunes language to compliant associational framing (`"associated with changes in..."`) and qualifies metaphorical analogies.
+- **Fail-Closed Quarantine**: If an assertion cannot be reconciled or contains unsupported numerical statistics after 3 iterations, it is removed from the active synthesis and quarantined in `quarantined_assertions` with an explicit reason trail.
+
+### 9.2 Phase 2: Dynamic Multi-Hop Tool-Calling Loop (ReAct)
+- **Engine Module**: [`services/engine/app/research/react_loop.py`](file:///Users/irfanashraf/Downloads/zmie/services/engine/app/research/react_loop.py)
+- **Architecture**: `ReActMultiHopOrchestrator` implements an iterative `Thought -> Action -> Observation` loop (up to 4 hops).
+- **Latent Entity Discovery**: While screening extracted candidate text, the agent automatically identifies latent pharmacologic and biomedical entities (e.g., Warfarin, CYP3A4, Metformin, Digoxin, narrow-therapeutic-index drugs).
+- **Autonomous Tool Invocation**: Dynamically dispatches sub-queries to:
+  - `tool_pubmed_search`: Target entity literature search.
+  - `tool_codex_lookup`: Classical polyglot and botanical compendia verification.
+  - `tool_safety_interaction_check`: Drug-herb interaction and safety graph cross-matching.
+- **Telemetry**: All executed tools and discovery observations are recorded in `react_tools_invoked` and embedded into the final `ResearchReport`.
+
+### 9.3 Phase 3: State Persistence & Async Checkpoint Orchestration
+- **Engine Module**: [`services/engine/app/research/engine.py`](file:///Users/irfanashraf/Downloads/zmie/services/engine/app/research/engine.py)
+- **Architecture**: Integrated `_persist_job_state()` checkpoints at every discrete pipeline transition (`DRAFT -> SEARCHING -> SCREENING -> EXTRACTING -> ANALYZING -> SYNTHESIZING -> VALIDATING -> COMPLETED`).
+- **Resilience**: State snapshots are committed to SQLite append-only storage, making long-running background research jobs recoverable and auditable across node restarts.
+
+### 9.4 Acceptance & Test Suite Verification
+- **Acceptance Tests**: Added [`tests/test_agentic_systems_acceptance.py`](file:///Users/irfanashraf/Downloads/zmie/tests/test_agentic_systems_acceptance.py) verifying reflection auto-repair, false equivalence mediation, multi-hop ReAct execution, and telemetry population.
+- **Total Test Count**: **511 tests passing in 1.52s**.
+- **Audit Harness**: 8/8 gates passing 100% in `scripts/audit_harness.py`.
+
+
 

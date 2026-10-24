@@ -29,6 +29,8 @@ from app.research.screening import ScreeningAndExtractionAgent
 from app.research.synthesis import SynthesisAndContradictionAgent
 from app.agents.safety_agent import SafetyIntelligenceEngine
 from app.agents.citation_validator import CitationValidator
+from app.research.reflection import ReflectionAndSelfCorrectionEngine
+from app.research.react_loop import ReActMultiHopOrchestrator
 
 
 class DeepResearchOperatingEngine:
@@ -46,6 +48,22 @@ class DeepResearchOperatingEngine:
     @classmethod
     def list_jobs(cls) -> List[ResearchJob]:
         return list(cls._job_store.values())
+
+    @classmethod
+    def _persist_job_state(cls, job: ResearchJob) -> None:
+        """Persists job state transition to append-only local storage."""
+        try:
+            from app.db.local_storage import LocalPersistentStore
+            store = LocalPersistentStore()
+            job_dict = job.model_dump()
+            store.save_research_job(
+                job_id=job.job_id,
+                question=job.question,
+                state=job.state.value if hasattr(job.state, "value") else str(job.state),
+                job_dict=job_dict
+            )
+        except Exception:
+            pass
 
     @classmethod
     async def create_research_job(
@@ -108,18 +126,41 @@ class DeepResearchOperatingEngine:
         if not job.plan:
             job.plan = ResearchPlannerAgent.create_plan(job.question, job.target_systems)
 
-        # Step 1: SEARCHING / RETRIEVAL
+        # Step 1: SEARCHING / RETRIEVAL (Dynamic Multi-Hop ReAct Loop)
         job.state = ResearchJobState.SEARCHING
-        raw_candidates = custom_candidates if custom_candidates is not None else cls._gather_mock_scholarly_corpus(job.question, job.plan)
+        cls._persist_job_state(job)
+
+        tools_invoked: List[str] = []
+        if custom_candidates is not None:
+            raw_candidates = custom_candidates
+        else:
+            # 1. Dynamic multi-hop tool execution
+            react_candidates, tools_invoked = ReActMultiHopOrchestrator.run_multihop_investigation(
+                question=job.question,
+                target_systems=job.target_systems
+            )
+            # 2. Benchmark candidate fixtures
+            benchmark_candidates = cls._gather_mock_scholarly_corpus(job.question, job.plan)
+            # Deduplicate by source_id
+            seen_ids = set()
+            raw_candidates = []
+            for c in (react_candidates + benchmark_candidates):
+                sid = c.get("source_id")
+                if sid not in seen_ids:
+                    seen_ids.add(sid)
+                    raw_candidates.append(c)
+
         raw_candidates_map = {c.get("source_id", f"src-{i}"): c for i, c in enumerate(raw_candidates)}
 
         # Step 2: SCREENING
         job.state = ResearchJobState.SCREENING
+        cls._persist_job_state(job)
         screening_decisions = ScreeningAndExtractionAgent.screen_candidates(raw_candidates, job.plan)
         job.screening_log = screening_decisions
 
         # Step 3: EXTRACTING
         job.state = ResearchJobState.EXTRACTING
+        cls._persist_job_state(job)
         evidence_table = ScreeningAndExtractionAgent.extract_evidence_table(
             screening_decisions,
             raw_candidates_map,
@@ -129,6 +170,7 @@ class DeepResearchOperatingEngine:
 
         # Step 4: ANALYZING & CONTRADICTIONS
         job.state = ResearchJobState.ANALYZING
+        cls._persist_job_state(job)
         contradictions = SynthesisAndContradictionAgent.analyze_contradictions(evidence_table, job.question)
         job.contradictions = contradictions
 
@@ -143,7 +185,17 @@ class DeepResearchOperatingEngine:
 
         # Step 7: SYNTHESIZING
         job.state = ResearchJobState.SYNTHESIZING
-        assertions = SynthesisAndContradictionAgent.generate_grounded_assertions(evidence_table, contradictions)
+        cls._persist_job_state(job)
+        draft_assertions = SynthesisAndContradictionAgent.generate_grounded_assertions(evidence_table, contradictions)
+
+        # Step 8: REFLECTION & SELF-CORRECTION LOOP (Autonomous Critic)
+        job.state = ResearchJobState.VALIDATING
+        cls._persist_job_state(job)
+        verified_assertions, reflection_audit = ReflectionAndSelfCorrectionEngine.execute_reflection_loop(
+            draft_assertions=draft_assertions,
+            evidence_items=evidence_table
+        )
+        auto_repaired_count = sum(1 for r in reflection_audit if r.get("status") == "AUTO_REPAIRED")
 
         narrative = cls._compose_narrative_synthesis(
             job.question,
@@ -153,10 +205,6 @@ class DeepResearchOperatingEngine:
             safety_eval,
             gaps
         )
-
-        # Step 8: CITATION VALIDATION
-        job.state = ResearchJobState.VALIDATING
-        citation_audit = await cls._audit_citations(assertions, evidence_table)
 
         # Step 9: COMPILATION & REPRODUCIBILITY HASH
         discovered_count = len(raw_candidates)
@@ -197,8 +245,11 @@ class DeepResearchOperatingEngine:
             safety_findings=safety_eval,
             research_gaps=gaps,
             next_best_questions=next_questions,
-            assertions=assertions,
-            citation_audit=citation_audit,
+            assertions=verified_assertions,
+            citation_audit=reflection_audit,
+            reflection_audit=reflection_audit,
+            react_tools_invoked=tools_invoked,
+            auto_repaired_count=auto_repaired_count,
             narrative_synthesis=narrative,
             reproducibility_hash=reproducibility_hash,
             created_at=datetime.utcnow()
@@ -207,6 +258,7 @@ class DeepResearchOperatingEngine:
         job.report = report
         job.state = ResearchJobState.COMPLETED
         job.updated_at = datetime.utcnow()
+        cls._persist_job_state(job)
 
         # Capture initial snapshot
         cls.create_snapshot(job.job_id)

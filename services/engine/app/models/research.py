@@ -179,6 +179,9 @@ class ResearchReport(BaseModel):
     next_best_questions: List[NextBestResearchQuestion] = Field(default_factory=list)
     assertions: List[GroundedAssertion] = Field(default_factory=list)
     citation_audit: List[Dict[str, Any]] = Field(default_factory=list)
+    reflection_audit: List[Dict[str, Any]] = Field(default_factory=list)
+    react_tools_invoked: List[str] = Field(default_factory=list)
+    auto_repaired_count: int = 0
     narrative_synthesis: str = ""
     reproducibility_hash: str = ""
     created_at: datetime = Field(default_factory=datetime.utcnow)
