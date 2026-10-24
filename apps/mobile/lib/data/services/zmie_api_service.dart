@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interaction_result.dart';
+import '../models/research_result.dart';
 
 class ZmieApiService {
   static const String defaultBaseUrl = 'http://127.0.0.1:8000';
@@ -77,6 +78,36 @@ class ZmieApiService {
     } catch (e) {
       // Offline fallback safety assessment
       return _generateOfflineSafetySimulation(drugs, herbs);
+    }
+  }
+
+  Future<ResearchResultModel> executeResearchJob(String question) async {
+    final baseUrl = await getBaseUrl();
+    final apiKey = await getApiKey();
+    final uri = Uri.parse('$baseUrl/v1/research/jobs');
+
+    final payload = {
+      'question': question,
+      'systems': ['modern', 'unani', 'ayurveda'],
+      'budget_limit': 50,
+      'execute_immediately': true,
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: _buildHeaders(apiKey),
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return ResearchResultModel.fromJson(data);
+      } else {
+        return ResearchResultModel.offlineMock(question);
+      }
+    } catch (_) {
+      return ResearchResultModel.offlineMock(question);
     }
   }
 

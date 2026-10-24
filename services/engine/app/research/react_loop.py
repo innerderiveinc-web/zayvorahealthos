@@ -111,6 +111,37 @@ class ReActToolRegistry:
             "actionable_directives": ["Standard clinical surveillance."]
         }
 
+    @staticmethod
+    def tool_compound_formulation_lookup(query: str) -> List[Dict[str, Any]]:
+        """Queries the Qarabadeen master library for polyherbal compound formulations."""
+        try:
+            from app.sources.qarabadeen_engine import get_qarabadeen_engine
+            engine = get_qarabadeen_engine()
+            matches = engine.search_formulations(query, limit=3)
+            results = []
+            for m in matches:
+                key = m.get("compound_key", "CMP")
+                title = m.get("transliterated_name") or m.get("canonical_title")
+                inds = ", ".join(m.get("primary_indications", []))
+                ing_count = len(m.get("key_ingredients", []))
+                results.append({
+                    "source_id": f"QARABADEEN-{key.upper()}",
+                    "title": f"Polyherbal Formulation: {title}",
+                    "abstract": f"Classical compound formulation. Temperament: {m.get('temperament', 'N/A')}. Indications: {inds}. Key ingredients ({ing_count}): {', '.join([i.get('ingredient', '') for i in m.get('key_ingredients', [])[:4]])}...",
+                    "study_design": "National Formulary of Unani Medicine / Statutory Pharmacopoeia",
+                    "evidence_grade": "E4_OBSERVATIONAL_COHORT",
+                    "authority_tier": "TIER_A",
+                    "medical_system": "UNANI",
+                    "is_retracted": False,
+                    "sample_size": 0,
+                    "duration": "Canonical Standard",
+                    "raw_entry": m
+                })
+            return results
+        except Exception as e:
+            logger.warning("Compound formulation lookup failed: %s", str(e))
+            return []
+
 
 class ReActMultiHopOrchestrator:
     """
@@ -157,6 +188,17 @@ class ReActMultiHopOrchestrator:
                     seen_source_ids.add(codex_item["source_id"])
                     candidates.append(codex_item)
                 break
+
+        # Check Qarabadeen polyherbal compound formulations if query contains compound terminology
+        compound_keywords = ["majun", "itrifal", "joshanda", "compound", "polyherbal", "khameera", "sharbat", "trikatu", "dabeed"]
+        if any(kw in q_lower for kw in compound_keywords):
+            q_comp_items = ReActToolRegistry.tool_compound_formulation_lookup(question)
+            if q_comp_items:
+                tools_invoked.append("tool_compound_formulation_lookup")
+                for c_item in q_comp_items:
+                    if c_item["source_id"] not in seen_source_ids:
+                        seen_source_ids.add(c_item["source_id"])
+                        candidates.append(c_item)
 
         # --- HOP 2: Latent Entity & Safety Clue Detection ---
         logger.info("ReAct Hop 2: Scanning retrieved candidates for secondary pharmacological entities")

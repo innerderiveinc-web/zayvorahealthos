@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../catalog/views/catalog_screen.dart';
 import '../../safety/views/safety_screen.dart';
+import '../../research/views/research_screen.dart';
 import '../../settings/views/settings_screen.dart';
 import '../../../core/app_colors.dart';
 
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       const CatalogScreen(),
       const SafetyScreen(),
+      const ResearchScreen(),
       SettingsScreen(
         onThemeChanged: widget.onThemeChanged,
         isDarkMode: widget.isDarkMode,
@@ -54,6 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.shield_outlined),
             selectedIcon: Icon(Icons.shield, color: AppColors.primaryTealLight),
             label: 'Safety Guard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.psychology_outlined),
+            selectedIcon: Icon(Icons.psychology, color: AppColors.primaryTealLight),
+            label: 'Research Agent',
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),

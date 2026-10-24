@@ -31,6 +31,7 @@ from app.agents.safety_agent import SafetyIntelligenceEngine
 from app.agents.citation_validator import CitationValidator
 from app.research.reflection import ReflectionAndSelfCorrectionEngine
 from app.research.react_loop import ReActMultiHopOrchestrator
+from app.research.debate import AdversarialDebateEngine
 
 
 class DeepResearchOperatingEngine:
@@ -197,6 +198,14 @@ class DeepResearchOperatingEngine:
         )
         auto_repaired_count = sum(1 for r in reflection_audit if r.get("status") == "AUTO_REPAIRED")
 
+        # Step 8.5: ADVERSARIAL DEBATE (Advocate vs Skeptic Cross-Examination)
+        debate_verdict = AdversarialDebateEngine.conduct_debate(
+            topic=job.question,
+            assertions=verified_assertions,
+            evidence_table=evidence_table,
+            contradictions=contradictions
+        )
+
         narrative = cls._compose_narrative_synthesis(
             job.question,
             job.plan.pico,
@@ -250,6 +259,7 @@ class DeepResearchOperatingEngine:
             reflection_audit=reflection_audit,
             react_tools_invoked=tools_invoked,
             auto_repaired_count=auto_repaired_count,
+            adversarial_debate=debate_verdict.model_dump(),
             narrative_synthesis=narrative,
             reproducibility_hash=reproducibility_hash,
             created_at=datetime.utcnow()

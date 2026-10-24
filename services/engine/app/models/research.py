@@ -182,6 +182,7 @@ class ResearchReport(BaseModel):
     reflection_audit: List[Dict[str, Any]] = Field(default_factory=list)
     react_tools_invoked: List[str] = Field(default_factory=list)
     auto_repaired_count: int = 0
+    adversarial_debate: Optional[Dict[str, Any]] = None
     narrative_synthesis: str = ""
     reproducibility_hash: str = ""
     created_at: datetime = Field(default_factory=datetime.utcnow)

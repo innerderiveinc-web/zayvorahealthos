@@ -331,3 +331,45 @@ async def generate_prisma_systematic_review(req: PRISMAGenerateRequest):
     return report.model_dump()
 
 
+class ExportDossierRequest(BaseModel):
+    export_format: str = Field(default="markdown", description="'markdown' or 'fhir'")
+
+
+@router.post("/jobs/{job_id}/export")
+async def export_research_dossier(
+    job_id: str,
+    req: ExportDossierRequest = ExportDossierRequest(),
+    auth: AuthContext = Depends(SecurityService.require_authenticated)
+):
+    """
+    POST /v1/research/jobs/{job_id}/export:
+    Generates a publication-ready clinical evidence dossier or FHIR EvidenceReport
+    with cryptographic HMAC SHA-256 verification signature.
+    """
+    job = DeepResearchOperatingEngine.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Research job '{job_id}' not found.")
+
+    report = job.report
+    if not report:
+        raise HTTPException(status_code=400, detail="Research report not yet generated. Execute the investigation first.")
+
+    from app.research.dossier_export import ClinicalDossierExporter
+
+    if req.export_format.lower() == "fhir":
+        return ClinicalDossierExporter.export_fhir_evidence_report(report)
+
+    markdown_dossier = ClinicalDossierExporter.export_clinical_markdown(report, job)
+    sig = ClinicalDossierExporter.compute_dossier_signature(
+        report.report_id, job.job_id, report.created_at.isoformat(), report.primary_question
+    )
+    return {
+        "job_id": job.job_id,
+        "report_id": report.report_id,
+        "format": "markdown",
+        "cryptographic_hmac_sha256": sig,
+        "dossier_content": markdown_dossier
+    }
+
+
+

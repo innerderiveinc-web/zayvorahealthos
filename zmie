@@ -61,7 +61,7 @@ case "$1" in
 
     test)
         print_banner
-        echo -e "${GREEN}[*] Running complete automated verification suite (511 tests)...${NC}\n"
+        echo -e "${GREEN}[*] Running complete automated verification suite (515 tests)...${NC}\n"
         exec "$PYTHON" -m unittest discover -s "$DIR/tests" -p "test_*.py"
         ;;
 

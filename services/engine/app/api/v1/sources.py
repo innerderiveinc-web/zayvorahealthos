@@ -162,3 +162,47 @@ def pubmed_service_status():
         "registry": "National Library of Medicine (NLM / NCBI)"
     }
 
+
+# --- Qarabadeen Polyherbal Formulations Corpus ---
+
+class ScreenCompoundSafetyRequest(BaseModel):
+    drugs: List[str]
+
+
+@router.get("/qarabadeen/search")
+def search_qarabadeen_compounds(q: str = Query(..., description="Query for polyherbal compounds or indications")):
+    """
+    Searches the 50 classical compound formulations from the Unani & Ayurvedic pharmacopoeia.
+    """
+    from app.sources.qarabadeen_engine import get_qarabadeen_engine
+    engine = get_qarabadeen_engine()
+    return engine.search_formulations(query=q, limit=10)
+
+
+@router.get("/qarabadeen/{compound_key}")
+def get_qarabadeen_compound(compound_key: str):
+    """
+    Retrieves full monograph details, temperament, constituent botanicals, and classical indications.
+    """
+    from app.sources.qarabadeen_engine import get_qarabadeen_engine
+    engine = get_qarabadeen_engine()
+    form = engine.get_formulation(compound_key)
+    if not form:
+        raise HTTPException(status_code=404, detail=f"Compound formulation '{compound_key}' not found.")
+    return form
+
+
+@router.post("/qarabadeen/{compound_key}/safety")
+def screen_qarabadeen_safety(compound_key: str, req: ScreenCompoundSafetyRequest):
+    """
+    Decomposes a polyherbal formulation into constituent botanicals and screens them
+    against modern prescription drugs via SafetyAgent.
+    """
+    from app.sources.qarabadeen_engine import get_qarabadeen_engine
+    engine = get_qarabadeen_engine()
+    res = engine.screen_compound_safety(compound_key, modern_drugs=req.drugs)
+    if not res.get("found", True):
+        raise HTTPException(status_code=404, detail=f"Compound formulation '{compound_key}' not found.")
+    return res
+
+
