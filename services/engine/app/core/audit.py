@@ -93,13 +93,15 @@ def compute_event_block_hash(event: AuditEvent) -> str:
 
 class AuditDispatcher:
     """Enterprise Audit Engine managing cryptographic hash chains."""
-    def __init__(self, load_persisted: Optional[bool] = None):
+    def __init__(self, load_persisted: Optional[bool] = None, persist: Optional[bool] = None):
         self._chain: List[AuditEvent] = []
         self._tenant_indices: Dict[str, List[str]] = {}
         import sys
         settings = get_settings()
-        should_load = load_persisted if load_persisted is not None else (settings.ENVIRONMENT not in ("test", "testing") and "unittest" not in sys.modules)
-        if should_load:
+        is_test = (settings.ENVIRONMENT in ("test", "testing") or "unittest" in sys.modules)
+        self._should_load = load_persisted if load_persisted is not None else (not is_test)
+        self._should_persist = persist if persist is not None else (self._should_load and not is_test)
+        if self._should_load:
             self._load_persisted()
 
 
@@ -183,11 +185,12 @@ class AuditDispatcher:
             self._tenant_indices[tenant_id] = []
         self._tenant_indices[tenant_id].append(event_id)
 
-        try:
-            from app.db.local_storage import LocalPersistentStore
-            LocalPersistentStore.get_instance().save_audit_event(event.model_dump())
-        except Exception:
-            pass
+        if self._should_persist:
+            try:
+                from app.db.local_storage import LocalPersistentStore
+                LocalPersistentStore.get_instance().save_audit_event(event.model_dump())
+            except Exception:
+                pass
 
         return event
 
