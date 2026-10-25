@@ -26,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install fastapi "uvicorn[standard]" pydantic pydantic-settings httpx asyncpg neo4j redis sqlalchemy greenlet pypdf python-dotenv
 
-      - name: Run Complete Automated Verification Suite (531 Tests)
+      - name: Run Complete Automated Verification Suite (537 Tests)
         run: |
           PYTHONPATH=services/engine:sdk/python python -m unittest discover -s tests -p "test_*.py"
 

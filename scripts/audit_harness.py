@@ -241,7 +241,7 @@ var URLSearchParams = function() { this.get = function() { return null; }; };
         failed = True
 
     # 8. FULL UNIT TEST SUITE
-    step(8, "Running Full Backend Unit Test Suite (531 Tests)")
+    step(8, "Running Full Backend Unit Test Suite (537 Tests)")
     env = os.environ.copy()
     env["PYTHONPATH"] = f"{os.path.join(ROOT_DIR, 'services', 'engine')}:{os.path.join(ROOT_DIR, 'sdk', 'python')}"
     python_bin = os.path.join(ROOT_DIR, ".venv", "bin", "python3")

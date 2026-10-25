@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.agents.safety_agent import SafetyIntelligenceEngine, SafetyCheckResult
 from app.agents.retraction_monitor import RetractionMonitor
+from app.research.ddhg_engine import DeepDrugHerbGeneEngine, DDHGAnalysisReport
 
 router = APIRouter(prefix="/safety", tags=["Clinical Safety & Retraction Watch"])
 
@@ -64,4 +65,26 @@ async def get_safety_catalog():
     Returns full clinical inventory of indexed botanicals, pharmaceuticals, CYP450/UGT enzymes, and transporters.
     """
     return SafetyIntelligenceEngine.get_interaction_catalog()
+
+
+class DDHGCheckRequest(BaseModel):
+    drugs: List[str]
+    herbs: List[str]
+    genetic_variants: Optional[List[dict]] = None
+    patient_factors: Optional[dict] = None
+
+
+@router.post("/ddhg-check", response_model=DDHGAnalysisReport)
+async def deep_drug_herb_gene_check(request: DDHGCheckRequest):
+    """
+    Deep Drug-Herb-Gene (DDHG) Pharmacogenomic Safety Evaluation (Phase 3):
+    Evaluates unified multi-target pharmacokinetic & pharmacodynamic hazard matrix
+    across Allopathic Drugs, 657 Catalogued Botanicals, and CPIC Human Genetic Variants.
+    """
+    return DeepDrugHerbGeneEngine.evaluate_ddhg_profile(
+        drugs=request.drugs,
+        herbs=request.herbs,
+        genetic_variants=request.genetic_variants,
+        patient_factors=request.patient_factors
+    )
 

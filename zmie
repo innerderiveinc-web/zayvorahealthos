@@ -61,7 +61,7 @@ case "$1" in
 
     test)
         print_banner
-        echo -e "${GREEN}[*] Running complete automated verification suite (531 tests)...${NC}\n"
+        echo -e "${GREEN}[*] Running complete automated verification suite (537 tests)...${NC}\n"
         exec "$PYTHON" -m unittest discover -s "$DIR/tests" -p "test_*.py"
         ;;
 
@@ -145,7 +145,7 @@ print(f'HMAC Merkle Root Signature: VALID (21 CFR Part 11 Compliant)' if valid e
         echo -e "Available Commands:"
         echo -e "  ${CYAN}serve${NC}      Start production engine & open interactive Web Workbench"
         echo -e "  ${CYAN}demo${NC}       Run commercial pitch demo for Universities, AYUSH & Investors"
-        echo -e "  ${CYAN}test${NC}       Execute all 531 unit, integration, and security tests"
+        echo -e "  ${CYAN}test${NC}       Execute all 537 unit, integration, and security tests"
         echo -e "  ${CYAN}benchmark${NC}  Execute 12 golden benchmark batteries & print SHA-256 cert"
         echo -e "  ${CYAN}status${NC}     Inspect engine health, database, and invariant states"
         echo -e "  ${CYAN}audit${NC}      Verify HMAC SHA-256 Merkle cryptographic audit trail"
