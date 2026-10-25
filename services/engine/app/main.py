@@ -51,6 +51,7 @@ from app.api.v1.controlled_launch import router as controlled_launch_router
 from app.api.v1.lifecycle import router as lifecycle_router
 from app.api.v1.billing import router as billing_router
 from app.api.v1.streaming_ingestion import router as streaming_ingestion_router
+from app.api.v1.meta_synthesis import router as meta_synthesis_router
 
 from urllib.parse import unquote
 import re
@@ -246,6 +247,7 @@ app.include_router(controlled_launch_router, prefix="/v1")
 app.include_router(lifecycle_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
 app.include_router(streaming_ingestion_router, prefix="/v1")
+app.include_router(meta_synthesis_router, prefix="/v1")
 
 @app.exception_handler(TenantAccessDeniedException)
 async def tenant_isolation_exception_handler(request: Request, exc: TenantAccessDeniedException):
