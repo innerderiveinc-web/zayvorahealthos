@@ -53,7 +53,7 @@ ZMIE provides a turnkey single-command executable CLI (`./zmie`):
 | `make dev-up` | Launch Docker Compose backing services in background |
 | `make dev-down` | Stop all local containers and prune temporary networks |
 | `make test` | Execute complete test suite (288+ tests) |
-| `make test-acceptance` | Run Prompt 26 & Prompt 27 acceptance test suites |
+| `make test-acceptance` | Run enterprise acceptance test suites |
 | `make lint` | Run flake8 / ruff linter |
 | `make typecheck` | Run mypy type analysis |
 | `make verify-all` | Run lint, typecheck, unit tests, and acceptance gates |
@@ -71,7 +71,7 @@ zmie/
 ├── CONTRIBUTING.md                         # Contribution workflows & PR templates
 ├── ARCHITECTURE.md                         # Deep architecture & invariant documentation
 ├── SECURITY.md                             # Threat model, HIPAA/GDPR & disclosure
-├── CHANGELOG.md                            # Versioned history across Prompts 1-28
+├── CHANGELOG.md                            # Versioned history and release notes
 ├── .env.example                            # Enterprise environment variables
 ├── docker-compose.yml                      # Backing services orchestration
 │

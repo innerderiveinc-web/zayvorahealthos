@@ -2,7 +2,7 @@
 
 **Platform:** ZAYVORA Medical Intelligence Engine (ZMIE)  
 **Classification:** Enterprise Healthcare & Scientific Intelligence Infrastructure  
-**Standard:** Prompt 28 Clauses 69–70, 109–110, 138–140  
+**Standard:** Enterprise Security Hardening & Zero-Trust Architecture Standards  
 
 ---
 

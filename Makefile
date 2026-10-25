@@ -1,6 +1,6 @@
 # ==============================================================================
 # ZMIE — ZAYVORA Medical Intelligence Engine™
-# Production Build & Development Automation Makefile (Prompt 28)
+# Production Build & Development Automation Makefile (Enterprise Release)
 # ==============================================================================
 
 SHELL := /bin/bash
@@ -25,7 +25,7 @@ dev-down: ## Stop backing infrastructure containers
 test: ## Run unit tests across all engine subsystems
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -p "test_*.py"
 
-test-acceptance: ## Run Prompt 26, 27, and 28 acceptance test suites
+test-acceptance: ## Run foundational enterprise acceptance test suites
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest tests/test_research_audit_acceptance.py tests/test_production_build_acceptance.py tests/test_skos_acceptance.py
 
 lint: ## Run flake8 / black lint checks

@@ -18,7 +18,7 @@ ZMIE operates under a strict **Zero-Fabrication Doctrine**:
 
 ## 2. Branching Strategy
 
-ZMIE uses a structured branch model (per Prompt 28 Clause 87):
+ZMIE uses a structured branch model (GitFlow / Trunk-Based Release):
 
 - `main`: Protected production branch. All merges require passed CI, security checks, and 2 peer approvals.
 - `release/vX.Y.Z`: Release candidate stabilization branch.
@@ -67,7 +67,7 @@ Every Pull Request must fill out the standard PR template (Clause 85):
 
 ### Module Reference
 - [ ] Module ID: (e.g., MODULE 02 — Identity & Authentication)
-- [ ] Prompt Clause(s): (e.g., Clauses 13, 15, 16)
+- [ ] Specification Clause(s): (e.g., Clauses 13, 15, 16)
 
 ### Invariant Verification
 - [ ] INV-01: Zero Fabrication Verified (No fake data or synthetic citations)

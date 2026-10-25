@@ -59,7 +59,7 @@ zmie/
 ├── CONTRIBUTING.md                         # Contribution Guidelines & PR Template
 ├── ARCHITECTURE.md                         # This file: Architecture & Module Map
 ├── SECURITY.md                             # Threat Model, HIPAA/GDPR & Disclosure
-├── CHANGELOG.md                            # Versioned changes Prompts 1-28
+├── CHANGELOG.md                            # Versioned changes and release history
 ├── .env.example                            # Enterprise environment variables
 ├── docker-compose.yml                      # Local infrastructure stack
 │
@@ -106,7 +106,7 @@ zmie/
 
 ---
 
-## 3. Core Architectural Invariants (Prompt 27 INV-01–INV-10)
+## 3. Core Architectural Invariants (INV-01–INV-10)
 
 1. **INV-01 (Zero Fabrication):** If scientific evidence does not exist or is unknown, return `UNKNOWN` / `NO_EVIDENCE`. Never fabricate plausible-sounding citations or mechanisms.
 2. **INV-02 (Tenant Boundary Isolation):** Tenant A must never access Tenant B datasets, research snapshots, cache entries, or private embeddings.
