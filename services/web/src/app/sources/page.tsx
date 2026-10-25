@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Database, ShieldCheck, CheckCircle2, AlertTriangle, ExternalLink, RefreshCw, Radio } from "lucide-react";
 import { NavigationHeader } from "../../components/NavigationHeader";
+import { LiveIngestionWaterfall } from "../../components/LiveIngestionWaterfall";
 
 export default function SourceUniversePage() {
   const [selectedTier, setSelectedTier] = useState<string>("ALL");
@@ -95,6 +96,9 @@ export default function SourceUniversePage() {
             </span>
           </div>
         </div>
+
+        {/* Live Multi-Source Streaming Ingestion Module */}
+        <LiveIngestionWaterfall />
 
         {/* Source Table */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">

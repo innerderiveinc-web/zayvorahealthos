@@ -50,6 +50,7 @@ from app.api.v1.production_readiness import router as production_readiness_route
 from app.api.v1.controlled_launch import router as controlled_launch_router
 from app.api.v1.lifecycle import router as lifecycle_router
 from app.api.v1.billing import router as billing_router
+from app.api.v1.streaming_ingestion import router as streaming_ingestion_router
 
 from urllib.parse import unquote
 import re
@@ -121,7 +122,12 @@ async def security_hardening_gateway_middleware(request: Request, call_next):
     2. Web Application Firewall (WAF) threat inspection (XSS, SQLi, Path Traversal, Cmd Inj, Prompt Inj)
     3. OWASP Top 10 Security Response Headers injection
     """
-    client_ip = request.client.host if request.client else "127.0.0.1"
+    # Extract client IP supporting reverse proxies (NGINX / K8s Ingress)
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "127.0.0.1"
 
     # 1. Rate Limiter Check (exempt docs and health checks)
     if not request.url.path.startswith(("/docs", "/openapi.json", "/redoc", "/favicon.ico", "/sw.js")):
@@ -239,6 +245,7 @@ app.include_router(production_readiness_router, prefix="/v1")
 app.include_router(controlled_launch_router, prefix="/v1")
 app.include_router(lifecycle_router, prefix="/v1")
 app.include_router(billing_router, prefix="/v1")
+app.include_router(streaming_ingestion_router, prefix="/v1")
 
 @app.exception_handler(TenantAccessDeniedException)
 async def tenant_isolation_exception_handler(request: Request, exc: TenantAccessDeniedException):

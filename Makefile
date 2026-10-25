@@ -69,5 +69,8 @@ deploy: ## Deploy hardened production stack via Docker Compose
 deploy-k8s: ## Deploy zero-trust enterprise stack to Kubernetes cluster
 	./deploy/scripts/deploy_production.sh k8s
 
+stress: ## Run high-concurrency 1,000-request stress and P99 latency benchmark
+	$(PYTHON) scripts/stress_benchmark.py 1000 50
+
 
 

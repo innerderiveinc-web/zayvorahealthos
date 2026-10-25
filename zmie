@@ -61,7 +61,7 @@ case "$1" in
 
     test)
         print_banner
-        echo -e "${GREEN}[*] Running complete automated verification suite (515 tests)...${NC}\n"
+        echo -e "${GREEN}[*] Running complete automated verification suite (520 tests)...${NC}\n"
         exec "$PYTHON" -m unittest discover -s "$DIR/tests" -p "test_*.py"
         ;;
 
@@ -132,17 +132,25 @@ print(f'HMAC Merkle Root Signature: VALID (21 CFR Part 11 Compliant)' if valid e
         exec "$DIR/deploy/scripts/deploy_production.sh" "$MODE"
         ;;
 
+    stress)
+        print_banner
+        COUNT="${2:-1000}"
+        POOL="${3:-50}"
+        exec "$PYTHON" "$DIR/scripts/stress_benchmark.py" "$COUNT" "$POOL"
+        ;;
+
     *)
         print_banner
         echo -e "${BOLD}Usage:${NC} ./zmie <command>\n"
         echo -e "Available Commands:"
         echo -e "  ${CYAN}serve${NC}      Start production engine & open interactive Web Workbench"
         echo -e "  ${CYAN}demo${NC}       Run commercial pitch demo for Universities, AYUSH & Investors"
-        echo -e "  ${CYAN}test${NC}       Execute all 515 unit, integration, and security tests"
+        echo -e "  ${CYAN}test${NC}       Execute all 520 unit, integration, and security tests"
         echo -e "  ${CYAN}benchmark${NC}  Execute 12 golden benchmark batteries & print SHA-256 cert"
         echo -e "  ${CYAN}status${NC}     Inspect engine health, database, and invariant states"
         echo -e "  ${CYAN}audit${NC}      Verify HMAC SHA-256 Merkle cryptographic audit trail"
         echo -e "  ${CYAN}deploy${NC}     Deploy production stack (Docker Compose or Kubernetes: './zmie deploy k8s')"
+        echo -e "  ${CYAN}stress${NC}     Run high-concurrency 1,000-request stress & P99 latency benchmark"
         echo ""
         exit 0
         ;;
