@@ -1,6 +1,6 @@
 """
 ZMIE Controlled Launch & Continuous Monitoring Models
-PROMPT 35 Architecture Implementation
+Controlled Launch & Production Ring Data Models
 Progressive Rings, Feature Registry, Incident Management & Scope Certificates
 """
 

@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Benchmarking & Validation FastAPI Router
-PROMPT 33 Architecture Implementation
+Scientific Benchmarking REST Gateway
 """
 
 from typing import List, Dict, Optional, Any

@@ -133,7 +133,7 @@ Action: Secondary mirror invoked; compromised block isolated; security alert dis
               </div>
               <h1 className="text-xl font-bold tracking-tight text-white">Production Security, Privacy & Tenancy Hardening</h1>
               <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-teal-500/10 text-teal-400 border border-teal-500/30 font-semibold">
-                PROMPT 32 HARDENED
+                ZERO-TRUST HARDENED
               </span>
             </div>
             <p className="text-sm text-slate-400 mt-1">

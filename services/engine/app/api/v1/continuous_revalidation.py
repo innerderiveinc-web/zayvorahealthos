@@ -1,6 +1,6 @@
 """
 ZMIE Continuous Evidence & Knowledge Revalidation FastAPI Router
-PROMPT 31 Architecture Implementation
+Continuous Evidence Revalidation REST Gateway
 """
 
 from typing import List, Optional, Dict, Any

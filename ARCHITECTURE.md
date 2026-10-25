@@ -2,7 +2,7 @@
 
 **System:** ZMIE — ZAYVORA Medical Intelligence Engine  
 **Classification:** Enterprise Scientific Knowledge Operating System  
-**Architecture Spec Reference:** Prompt 27 (`docs/ZMIE_ENTERPRISE_PRODUCTION_BUILD_SPECIFICATION.md`) & Prompt 28  
+**Architecture Spec Reference:** [`docs/architecture/enterprise_production_build_specification.md`](docs/architecture/enterprise_production_build_specification.md) & [`docs/architecture/canonical_architecture_v1.md`](docs/architecture/canonical_architecture_v1.md)  
 
 ---
 

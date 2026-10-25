@@ -13,7 +13,7 @@
 ### Quick Verification Command
 Run the complete, offline-capable master verification test suite to ensure all 9 architectural pillars are functioning with zero regressions:
 ```bash
-PYTHONPATH=services/engine .venv/bin/python3 tests/master_showcase.py
+PYTHONPATH=services/engine .venv/bin/python3 examples/master_showcase.py
 ```
 
 Run the quantitative evaluation & adversarial safety benchmark:

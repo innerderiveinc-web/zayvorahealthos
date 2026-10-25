@@ -1,6 +1,6 @@
 """
 ZMIE Controlled Launch & Continuous Monitoring Acceptance Test Suite
-PROMPT 35 Certification — Progressive Rings, Tripwires, and Autonomous Daemons
+Controlled Launch Certification — Progressive Rings, Tripwires & Daemons
 """
 
 import unittest

@@ -1,5 +1,7 @@
-"""ZMIE Ontology Engine Package."""
+"""
+Backward compatibility re-export shim: app.ontology_engine -> app.ontology
+"""
+from app.ontology.core import GlobalTerminologyEvolutionEngine
+from app.ontology import core
 
-from app.ontology_engine.core import GlobalTerminologyEvolutionEngine
-
-__all__ = ["GlobalTerminologyEvolutionEngine"]
+__all__ = ["GlobalTerminologyEvolutionEngine", "core"]

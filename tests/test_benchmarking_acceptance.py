@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Benchmarking & Validation Acceptance Test Suite
-PROMPT 33 Certification — Multi-Domain Golden Batteries & Go/No-Go Matrix
+Scientific Benchmarking Certification — Multi-Domain Golden Batteries
 """
 
 import unittest

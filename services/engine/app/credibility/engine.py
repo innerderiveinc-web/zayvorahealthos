@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Credibility, Verification, Provenance & Anti-Fabrication Audit Engine
-PROMPT 29 — The 14-Layer Anti-Fabrication Engine & Mandatory Evidence Chain
+The 14-Layer Anti-Fabrication Engine & Mandatory Evidence Chain
 """
 
 import re

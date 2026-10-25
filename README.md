@@ -5,8 +5,8 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-teal.svg)](https://fastapi.tiangolo.com)
 [![Tests](https://img.shields.io/badge/Tests-515%20Passing-success.svg)](tests/)
-[![Architecture](https://img.shields.io/badge/Release-v1.0.0--PROD-teal.svg)](docs/ZMIE_CANONICAL_ARCHITECTURE_V1.md)
-[![Validation](https://img.shields.io/badge/Benchmark-100%25%20GO-brightgreen.svg)](docs/ZMIE_REAL_IMPLEMENTATION_AND_OPERATIONS_REPORT.md)
+[![Architecture](https://img.shields.io/badge/Release-v1.0.0--PROD-teal.svg)](docs/architecture/canonical_architecture_v1.md)
+[![Validation](https://img.shields.io/badge/Benchmark-100%25%20GO-brightgreen.svg)](docs/audit/real_implementation_and_operations_report.md)
 
 ---
 
@@ -138,5 +138,5 @@ To verify the enterprise specification and production readiness:
 .venv/bin/python3 -m unittest tests/test_research_audit_acceptance.py
 
 # Run the full end-to-end production showcase
-.venv/bin/python3 tests/production_build_showcase.py
+.venv/bin/python3 examples/production_build_showcase.py
 ```

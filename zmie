@@ -56,7 +56,7 @@ case "$1" in
     demo|commercial)
         print_banner
         echo -e "${GREEN}[*] Executing Commercial & Institutional 3-Pathway Demonstration...${NC}\n"
-        exec "$PYTHON" "$DIR/tests/commercial_showcase.py"
+        exec "$PYTHON" "$DIR/examples/commercial_showcase.py"
         ;;
 
     test)
@@ -67,7 +67,7 @@ case "$1" in
 
     benchmark)
         print_banner
-        echo -e "${GREEN}[*] Running 12 Golden Benchmark Batteries (Prompt 33)...${NC}\n"
+        echo -e "${GREEN}[*] Running 12 Golden Verification Benchmark Batteries...${NC}\n"
         "$PYTHON" -c "
 from app.benchmarking.engine import ScientificBenchmarkingEngine
 bench = ScientificBenchmarkingEngine()
@@ -132,7 +132,7 @@ print(f'HMAC Merkle Root Signature: VALID (21 CFR Part 11 Compliant)' if valid e
         echo -e "Available Commands:"
         echo -e "  ${CYAN}serve${NC}      Start production engine & open interactive Web Workbench"
         echo -e "  ${CYAN}demo${NC}       Run commercial pitch demo for Universities, AYUSH & Investors"
-        echo -e "  ${CYAN}test${NC}       Execute all 463 unit, integration, and security tests"
+        echo -e "  ${CYAN}test${NC}       Execute all 515 unit, integration, and security tests"
         echo -e "  ${CYAN}benchmark${NC}  Execute 12 golden benchmark batteries & print SHA-256 cert"
         echo -e "  ${CYAN}status${NC}     Inspect engine health, database, and invariant states"
         echo -e "  ${CYAN}audit${NC}      Verify HMAC SHA-256 Merkle cryptographic audit trail"

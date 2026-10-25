@@ -1,6 +1,6 @@
 """
 ZMIE Production Readiness & Pre-Flight Certification Acceptance Test Suite
-PROMPT 34 Certification — Independent Production Gate, 28 Domains, 9 Scopes
+Production Readiness Audit Certification — 28 Domains, 9 Scopes
 """
 
 import unittest

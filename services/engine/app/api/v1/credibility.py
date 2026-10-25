@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Credibility & Anti-Fabrication API Endpoints
-PROMPT 29 — 14-Layer Verification, Evidence Chain Auditing, and State Lifecycle
+14-Layer Verification, Evidence Chain Auditing, and State Lifecycle API
 """
 
 from typing import Dict, Any, List, Optional

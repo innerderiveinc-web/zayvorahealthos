@@ -50,7 +50,10 @@ clean: ## Clean Python cache and build artifacts
 	find . -type f -name "*.pyo" -delete 2>/dev/null || true
 
 showcase: ## Run interactive production showcase demonstration
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) tests/production_build_showcase.py
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) examples/production_build_showcase.py
+
+commercial: ## Run commercial 3-pathway showcase demonstration
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) examples/commercial_showcase.py
 
 audit: ## Run complete permanent automated quality and regression harness
 	$(PYTHON) scripts/audit_harness.py

@@ -1,6 +1,6 @@
 """
 ZMIE Production Security & Privacy Hardening Acceptance Test Suite
-PROMPT 32 Certification & Enterprise Security Acceptance Tests
+Enterprise Zero-Trust Security & Hardening Acceptance Tests
 """
 
 import unittest

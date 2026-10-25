@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Master 9-Pillar End-to-End Verification
         run: |
-          PYTHONPATH=services/engine python tests/master_showcase.py
+          PYTHONPATH=services/engine python examples/master_showcase.py
 
       - name: Run Quantitative Adversarial & Safety Evaluation Suite
         run: |

@@ -1,6 +1,6 @@
 """
 ZMIE Continuous Evidence & Knowledge Revalidation Models
-PROMPT 31 Architecture Implementation
+Continuous Evidence Revalidation Data Models
 
 Implements canonical models for:
 - Revalidation States (Clause 6)

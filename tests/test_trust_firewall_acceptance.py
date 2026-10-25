@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Trust Firewall Master Acceptance Test Suite
-PROMPT 30 Master Certification (All 20 Master Acceptance Tests)
+Scientific Trust Firewall & Real-Source Verification Acceptance Tests
 """
 
 import unittest

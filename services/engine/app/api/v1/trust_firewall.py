@@ -1,6 +1,6 @@
 """
 ZMIE Scientific Trust Firewall FastAPI Router
-PROMPT 30 Master Architecture Specification
+Scientific Trust Firewall REST Gateway
 """
 
 from typing import List, Optional

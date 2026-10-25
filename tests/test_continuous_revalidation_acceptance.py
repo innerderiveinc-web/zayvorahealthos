@@ -1,6 +1,6 @@
 """
 ZMIE Continuous Evidence & Knowledge Revalidation Acceptance Test Suite
-PROMPT 31 Certification & 20 Master Acceptance Tests (Clauses 277-296)
+Continuous Evidence Revalidation Certification & Acceptance Tests
 """
 
 import unittest

@@ -1,6 +1,6 @@
 """
 Acceptance Test Suite for ZMIE Scientific Credibility, Verification, Provenance & Anti-Fabrication Engine
-PROMPT 29 — Acceptance Tests for Credibility Doctrine, Epistemic Levels & 14-Layer Audit
+Credibility Doctrine, Epistemic Levels & 14-Layer Audit Acceptance Tests
 """
 
 import unittest

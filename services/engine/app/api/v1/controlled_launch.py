@@ -1,6 +1,6 @@
 """
 ZMIE Controlled Launch & Continuous Monitoring FastAPI Router
-PROMPT 35 Architecture Implementation
+Controlled Launch REST Gateway
 """
 
 from typing import List, Dict, Optional, Any
