@@ -128,7 +128,10 @@ class MultiDimensionalRankingEngine:
                 "authority": round(auth_score, 3),
                 "evidence": round(evd_score, 3),
                 "graph": round(graph_score, 3),
-                "freshness": round(freshness_score, 3)
+                "freshness": round(freshness_score, 3),
+                "bm25": round(float(cand.channel_scores.get("bm25", lexical_score)), 3),
+                "vector": round(float(cand.channel_scores.get("vector", entity_score)), 3),
+                "rrf_fusion": round(float(cand.channel_scores.get("rrf_fusion", 0.0)), 6)
             }
 
             # Human-readable "Why This Result?" translation (Section 27)

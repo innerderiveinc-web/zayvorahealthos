@@ -104,6 +104,54 @@ async def entity_search(req: SearchQueryRequest):
     return await orchestrator.execute(query=req.query, mode="entity", filters=req.filters)
 
 
+@router.post("/hybrid")
+async def hybrid_search_3tier(req: SearchQueryRequest):
+    """
+    3-Tier Hybrid Neural & Semantic Search Endpoint (Phase 2):
+    Fuses:
+    1. Tier 1: Lexical MeSH & Pharmacological Thesaurus BM25
+    2. Tier 2: Biomedical Dense Neural Vector Embeddings (128-dim Cosine Distance)
+    3. Tier 3: Causal Knowledge Graph Multi-Hop Traversal
+    With Reciprocal Rank Fusion (k=60) and multi-channel consensus explainability.
+    """
+    result = await orchestrator.execute(query=req.query, mode=req.mode or "evidence", filters=req.filters)
+    mesh_info = orchestrator.pipeline.mesh_thesaurus.expand_query_mesh(req.query)
+
+    tier_candidates = []
+    for r in result.ranked_results:
+        cand = r.candidate
+        tier_candidates.append({
+            "document_id": cand.document_id,
+            "title": cand.title,
+            "snippet": cand.snippet_or_passage,
+            "source_organization": cand.source_organization,
+            "authority_tier": cand.authority_tier,
+            "evidence_level": cand.evidence_level,
+            "study_type": cand.study_type,
+            "final_composite_score": r.final_score,
+            "channel_scores": {
+                "bm25": r.component_scores.get("bm25", 0.0),
+                "neural_vector": r.component_scores.get("vector", 0.0),
+                "causal_graph": r.component_scores.get("graph", 0.0),
+                "rrf_fusion": r.component_scores.get("rrf_fusion", 0.0),
+                "authority": r.component_scores.get("authority", 0.0),
+                "evidence_ladder": r.component_scores.get("evidence", 0.0)
+            },
+            "causal_paths": cand.causal_paths,
+            "mesh_terms": cand.mesh_annotations,
+            "why_this_result": r.why_this_result,
+            "relevance_explanation": cand.relevance_explanation
+        })
+
+    return {
+        "query": req.query,
+        "total_results": result.total_results,
+        "mesh_expansion": mesh_info,
+        "fusion_algorithm": "Weighted Reciprocal Rank Fusion (k=60) + Multi-Dimensional Clinical Reranking",
+        "results": tier_candidates
+    }
+
+
 # -----------------------------------------------------------------------------
 # 2. QUERY SUGGESTIONS & EXPLAINABILITY (Sections 53, 108)
 # -----------------------------------------------------------------------------

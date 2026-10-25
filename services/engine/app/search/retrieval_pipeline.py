@@ -1,16 +1,15 @@
 """
-ZMIE Multi-Modal Hybrid Retrieval Pipeline (Sections 11-19, 28-29)
-Combines six retrieval channels:
-1. Lexical Retrieval (BM25-style scoring & field boosting)
-2. Semantic / Dense Vector Retrieval (similarity & licensing quarantine)
-3. Entity Retrieval (canonical concept nodes & hierarchies)
-4. Graph Retrieval (knowledge graph multi-hop paths)
-5. Evidence Retrieval (PICO context & Evidence Ladder E0-E6)
-6. Safety Retrieval (CYP450, contraindications, red-flag triage)
+ZMIE Multi-Modal 3-Tier Hybrid Neural & Semantic Retrieval Pipeline (Sections 11-19, 28-29)
+Combines:
+1. Tier 1: Lexical MeSH & Pharmacological Thesaurus BM25 Scoring
+2. Tier 2: Biomedical Dense Neural Vector Semantic Similarity (128-dim Cosine Distance)
+3. Tier 3: Causal Knowledge Graph Multi-Hop Traversal (Substance -> Target -> Pathway -> Phenotype)
+4. Safety & Pharmacovigilance Retrieval (CYP450, contraindications, red-flag triage)
+5. Reciprocal Rank Fusion (RRF, k=60) with Adaptive Multi-Channel Dynamic Balancing
 Applies hard constraints filtering (license, tenant, retraction, date) and canonical deduplication.
 """
 
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 from datetime import datetime
 import re
 from pydantic import BaseModel, Field
@@ -20,6 +19,9 @@ from app.models.claim import MedicalSystem, EvidenceGrade, StudyDesign
 from app.search.query_engine import StructuredQuery, QueryIntent
 from app.graph.engine import MedicalKnowledgeGraphEngine
 from app.models.graph import ControlledPredicate, EvidenceLadder, EvidenceStatus
+from app.search.mesh_thesaurus import MeSHThesaurus
+from app.search.neural_vector import NeuralVectorEmbedder
+from app.search.causal_graph_search import CausalGraphSearchEngine, CausalPath
 
 
 class RetrievalCandidate(BaseModel):
@@ -38,20 +40,30 @@ class RetrievalCandidate(BaseModel):
     evidence_status: Optional[str] = None
     is_retracted: bool = False
     is_superseded: bool = False
-    channel_scores: Dict[str, float] = Field(default_factory=dict)
+    channel_scores: Dict[str, Any] = Field(default_factory=dict)
     paragraph_anchor_hash: Optional[str] = None
     deduplication_sources: List[str] = Field(default_factory=list)
     relevance_explanation: Optional[str] = None
+    causal_paths: List[str] = Field(default_factory=list)
+    mesh_annotations: List[str] = Field(default_factory=list)
+    vector_embedding: Optional[List[float]] = None
 
 
 class HybridRetrievalPipeline:
     """
-    Orchestrates the 6 retrieval channels, hard filtering, and canonical deduplication.
+    Orchestrates the 3-Tier Hybrid Search Engine:
+    - Tier 1: BM25 MeSH Lexical
+    - Tier 2: Dense Neural Vector Cosine
+    - Tier 3: Causal Multi-Hop Graph
+    Plus Safety Channel and RRF k=60 Fusion.
     """
 
     def __init__(self, graph_engine: Optional[MedicalKnowledgeGraphEngine] = None):
         self.graph = graph_engine or MedicalKnowledgeGraphEngine()
+        self.mesh_thesaurus = MeSHThesaurus()
+        self.causal_engine = CausalGraphSearchEngine()
         self._corpus: List[Dict[str, Any]] = self._build_canonical_corpus()
+        self._precompute_corpus_vectors()
 
     def _build_canonical_corpus(self) -> List[Dict[str, Any]]:
         """
@@ -63,7 +75,7 @@ class HybridRetrievalPipeline:
                 "document_id": "PMID:18442638",
                 "doi": "10.1016/j.metabol.2008.01.013",
                 "title": "Efficacy of Berberine in Patients with Type 2 Diabetes Mellitus",
-                "abstract": "Berberine lowered fasting blood glucose and HbA1c significantly in adult diabetic patients. The HbA1c reduction was 1.2% at 3 months, demonstrating therapeutic efficacy comparable to metformin with low hepatic toxicity.",
+                "abstract": "Berberine lowered fasting blood glucose and HbA1c significantly in adult diabetic patients. The HbA1c reduction was 1.2% at 3 months, demonstrating therapeutic efficacy comparable to metformin with low hepatic toxicity through AMPK activation.",
                 "source_id": "SRC-NLM-001",
                 "source_organization": "National Library of Medicine / PubMed",
                 "authority_tier": AuthorityTier.TIER_B.value,
@@ -73,7 +85,8 @@ class HybridRetrievalPipeline:
                 "study_type": StudyDesign.DOUBLE_BLIND_RCT.value,
                 "evidence_level": EvidenceLadder.E6_CONTROLLED_CLINICAL.value,
                 "is_retracted": False,
-                "entities": ["Berberine", "Type 2 Diabetes Mellitus", "HbA1c", "Metformin"],
+                "entities": ["Berberine", "Type 2 Diabetes Mellitus", "HbA1c", "Metformin", "AMPK"],
+                "mesh_terms": ["Diabetes Mellitus, Type 2", "Berberine", "Metformin", "AMP-Activated Protein Kinases", "Blood Glucose"],
                 "paragraph_anchor_hash": "8a1c90df44b1234a"
             },
             # 2. Berberine - Contradicting Pilot Study (2023)
@@ -92,6 +105,7 @@ class HybridRetrievalPipeline:
                 "evidence_level": EvidenceLadder.E5_HUMAN_OBSERVATIONAL.value,
                 "is_retracted": False,
                 "entities": ["Berberine", "Crude Berberis Extract", "Type 2 Diabetes Mellitus", "Obesity"],
+                "mesh_terms": ["Diabetes Mellitus, Type 2", "Berberis", "Obesity, Morbid", "Treatment Failure"],
                 "paragraph_anchor_hash": "3b29c9fa1182312b"
             },
             # 3. Berberine - Pharmacokinetics & CYP3A4 Interaction (2012)
@@ -109,7 +123,8 @@ class HybridRetrievalPipeline:
                 "study_type": StudyDesign.PROSPECTIVE_COHORT.value,
                 "evidence_level": EvidenceLadder.E5_HUMAN_OBSERVATIONAL.value,
                 "is_retracted": False,
-                "entities": ["Berberine", "Cytochrome P450 3A4", "CYP3A4", "Drug Interaction"],
+                "entities": ["Berberine", "Cytochrome P450 3A4", "CYP3A4", "Drug Interaction", "Cyclosporine"],
+                "mesh_terms": ["Cytochrome P-450 CYP3A", "Berberine", "Drug Interactions", "ATP Binding Cassette Transporter, Subfamily B"],
                 "paragraph_anchor_hash": "7f1190cd5521980e"
             },
             # 4. Irritable Bowel Syndrome - Rome IV Diagnostic Guidelines (2016)
@@ -128,6 +143,7 @@ class HybridRetrievalPipeline:
                 "evidence_level": EvidenceLadder.E6_CONTROLLED_CLINICAL.value,
                 "is_retracted": False,
                 "entities": ["Irritable Bowel Syndrome", "IBS", "Abdominal Pain", "Functional Dyspepsia"],
+                "mesh_terms": ["Irritable Bowel Syndrome", "Practice Guidelines as Topic", "Abdominal Pain", "Gastrointestinal Diseases"],
                 "paragraph_anchor_hash": "c019283849104812"
             },
             # 5. Unani Classical Codex - Al-Qanun fi al-Tibb on Zoaf-e-Meda & Hazm
@@ -145,7 +161,8 @@ class HybridRetrievalPipeline:
                 "study_type": "classical_text_codex",
                 "evidence_level": "canonical_traditional_claim",
                 "is_retracted": False,
-                "entities": ["Zoaf-e-Meda", "Quwwat-e-Hazima", "Hazm", "Mizaj Barid", "Meda"],
+                "entities": ["Zoaf-e-Meda", "Quwwat-e-Hazima", "Hazm", "Mizaj Barid", "Meda", "Irritable Bowel Syndrome"],
+                "mesh_terms": ["Dyspepsia", "Irritable Bowel Syndrome", "Medicine, Traditional"],
                 "paragraph_anchor_hash": "d99118274a100918"
             },
             # 6. Ayurveda Classical Codex - Charaka Samhita on Agni, Mandagni & Ama
@@ -163,10 +180,49 @@ class HybridRetrievalPipeline:
                 "study_type": "classical_text_codex",
                 "evidence_level": "canonical_traditional_claim",
                 "is_retracted": False,
-                "entities": ["Jatharagni", "Mandagni", "Ama", "Grahani", "Digestive Fire"],
+                "entities": ["Jatharagni", "Mandagni", "Ama", "Grahani", "Digestive Fire", "Irritable Bowel Syndrome"],
+                "mesh_terms": ["Medicine, Ayurvedic", "Dyspepsia", "Irritable Bowel Syndrome"],
                 "paragraph_anchor_hash": "e112233445566778"
             },
-            # 7. Retracted Paper Example (Fabricated Clinical Trial)
+            # 7. Curcumin in Active Rheumatoid Arthritis RCT (2019)
+            {
+                "document_id": "PMID:31544923",
+                "doi": "10.1002/ptr.6474",
+                "title": "Efficacy and Safety of Curcumin in Patients with Active Rheumatoid Arthritis: A Randomized Controlled Trial",
+                "abstract": "A randomized, double-blind, placebo-controlled trial evaluating curcumin (500mg BID) in patients with active rheumatoid arthritis demonstrated significant reduction in Disease Activity Score 28 (DAS28) and tender joint counts via NF-kB and COX-2 suppression.",
+                "source_id": "SRC-NLM-001",
+                "source_organization": "National Library of Medicine / PubMed",
+                "authority_tier": AuthorityTier.TIER_B.value,
+                "license_class": LicenseClass.CLASS_B.value,
+                "publication_year": 2019,
+                "medical_system": MedicalSystem.MODERN.value,
+                "study_type": StudyDesign.DOUBLE_BLIND_RCT.value,
+                "evidence_level": EvidenceLadder.E6_CONTROLLED_CLINICAL.value,
+                "is_retracted": False,
+                "entities": ["Curcumin", "Rheumatoid Arthritis", "NF-kB", "COX-2", "DAS28"],
+                "mesh_terms": ["Rheumatoid Arthritis", "Curcumin", "NF-kappa B", "Cyclooxygenase 2"],
+                "paragraph_anchor_hash": "4a5b6c7d8e9f0123"
+            },
+            # 8. Withania somnifera (Ashwagandha) for Stress & Anxiety (2019)
+            {
+                "document_id": "PMID:31517876",
+                "doi": "10.1097/MD.0000000000017186",
+                "title": "An investigation into the stress-relieving and pharmacological actions of an ashwagandha (Withania somnifera) extract: A randomized, double-blind, placebo-controlled study",
+                "abstract": "Ashwagandha supplementation was associated with significant reductions in perceived stress scores, morning cortisol levels, and HPA axis reactivity compared with placebo, without serious adverse effects.",
+                "source_id": "SRC-NLM-001",
+                "source_organization": "National Library of Medicine / PubMed",
+                "authority_tier": AuthorityTier.TIER_B.value,
+                "license_class": LicenseClass.CLASS_B.value,
+                "publication_year": 2019,
+                "medical_system": MedicalSystem.MODERN.value,
+                "study_type": StudyDesign.DOUBLE_BLIND_RCT.value,
+                "evidence_level": EvidenceLadder.E6_CONTROLLED_CLINICAL.value,
+                "is_retracted": False,
+                "entities": ["Withania somnifera", "Ashwagandha", "Cortisol", "Stress", "Depression"],
+                "mesh_terms": ["Withania", "Hydrocortisone", "Stress, Psychological", "Anxiety"],
+                "paragraph_anchor_hash": "5b6c7d8e9f01234a"
+            },
+            # 9. Retracted Paper Example (Fabricated Clinical Trial)
             {
                 "document_id": "PMID:99999999",
                 "doi": "10.1001/jama.fake.001",
@@ -182,39 +238,62 @@ class HybridRetrievalPipeline:
                 "evidence_level": EvidenceLadder.E6_CONTROLLED_CLINICAL.value,
                 "is_retracted": True,
                 "entities": ["Berberine", "Type 2 Diabetes Mellitus"],
+                "mesh_terms": ["Diabetes Mellitus, Type 2", "Berberine"],
                 "paragraph_anchor_hash": "ff00ff00ff00ff00"
             }
         ]
 
+    def _precompute_corpus_vectors(self):
+        """Precomputes 128-dimensional dense vectors for all corpus documents."""
+        for doc in self._corpus:
+            combined_text = f"{doc['title']} {doc['abstract']}"
+            entities = doc.get("entities", [])
+            study_type = doc.get("study_type", "")
+            doc["dense_vector"] = NeuralVectorEmbedder.embed_text(
+                text=combined_text,
+                entities=entities,
+                study_type=study_type
+            )
+
     def execute_retrieval(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
         """
-        Executes hybrid candidate retrieval across all channels and merges them.
+        Executes 3-Tier Hybrid Retrieval:
+        - Tier 1: Lexical MeSH BM25 (Weight = 0.35)
+        - Tier 2: Biomedical Dense Neural Vector (Weight = 0.35)
+        - Tier 3: Causal Graph Multi-Hop Traversal (Weight = 0.30)
+        Plus Safety Channel (Weight = 0.40) & Reciprocal Rank Fusion (k=60).
         """
         candidates_map: Dict[str, RetrievalCandidate] = {}
 
-        # Channel 1: Lexical Retrieval
-        lex_results = self._retrieve_lexical(sq)
-        for cand in lex_results:
+        # 1. Tier 1: BM25 Lexical + MeSH Expansion
+        bm25_results = self._retrieve_tier1_bm25_mesh(sq)
+        for cand in bm25_results:
             candidates_map[cand.document_id] = cand
 
-        # Channel 2: Entity & Semantic Retrieval
-        ent_results = self._retrieve_entities(sq)
-        for cand in ent_results:
+        # 2. Tier 2: Dense Neural Vector Search
+        neural_results = self._retrieve_tier2_dense_vector(sq)
+        for cand in neural_results:
             if cand.document_id in candidates_map:
-                candidates_map[cand.document_id].channel_scores["entity"] = cand.channel_scores.get("entity", 0.9)
+                existing = candidates_map[cand.document_id]
+                existing.channel_scores["vector"] = cand.channel_scores.get("vector", 0.0)
+                existing.channel_scores["entity"] = cand.channel_scores.get("entity", 0.0)
+                existing.vector_embedding = cand.vector_embedding
             else:
                 candidates_map[cand.document_id] = cand
 
-        # Channel 3: Graph Retrieval
-        graph_results = self._retrieve_graph(sq)
+        # 3. Tier 3: Causal Knowledge Graph Multi-Hop Traversal
+        graph_results = self._retrieve_tier3_causal_graph(sq)
         for cand in graph_results:
             if cand.document_id in candidates_map:
-                candidates_map[cand.document_id].channel_scores["graph"] = 0.95
+                existing = candidates_map[cand.document_id]
+                existing.channel_scores["graph"] = cand.channel_scores.get("graph", 0.0)
+                if cand.causal_paths:
+                    existing.causal_paths.extend(cand.causal_paths)
             else:
                 candidates_map[cand.document_id] = cand
 
-        # Channel 4: Safety Retrieval
-        safety_results = []
+        # 4. Safety Channel (if intent demands)
+        safety_results: List[RetrievalCandidate] = []
         if QueryIntent.SAFETY in sq.intents or QueryIntent.INTERACTION in sq.intents:
             safety_results = self._retrieve_safety(sq)
             for cand in safety_results:
@@ -223,25 +302,35 @@ class HybridRetrievalPipeline:
                 else:
                     candidates_map[cand.document_id] = cand
 
-        # Reciprocal Rank Fusion (RRF) scoring with standard smoothing constant k=60
-        channel_rankings = [
-            ("lexical", lex_results, 1.0),
-            ("entity", ent_results, 1.0),
-            ("graph", graph_results, 0.9),
-            ("safety", safety_results, 1.2),
+        # 5. Weighted Reciprocal Rank Fusion (RRF, k=60)
+        channel_weights = {
+            "bm25": 0.35,
+            "vector": 0.35,
+            "graph": 0.30,
+            "safety": 0.40 if (QueryIntent.SAFETY in sq.intents or QueryIntent.INTERACTION in sq.intents) else 0.0
+        }
+        channel_lists = [
+            ("bm25", bm25_results, channel_weights["bm25"]),
+            ("vector", neural_results, channel_weights["vector"]),
+            ("graph", graph_results, channel_weights["graph"]),
+            ("safety", safety_results, channel_weights["safety"])
         ]
+
         rrf_k = 60
-        for ch_name, ch_cands, ch_weight in channel_rankings:
+        for ch_name, ch_cands, ch_weight in channel_lists:
+            if ch_weight <= 0.0 or not ch_cands:
+                continue
             for rank_idx, cand in enumerate(ch_cands):
                 doc_id = cand.document_id
                 if doc_id in candidates_map:
-                    cur_rrf = candidates_map[doc_id].channel_scores.get("rrf_fusion", 0.0)
-                    candidates_map[doc_id].channel_scores["rrf_fusion"] = round(cur_rrf + (ch_weight / (rrf_k + rank_idx + 1)), 5)
+                    current_rrf = candidates_map[doc_id].channel_scores.get("rrf_fusion", 0.0)
+                    added_score = ch_weight / (rrf_k + rank_idx + 1)
+                    candidates_map[doc_id].channel_scores["rrf_fusion"] = round(current_rrf + added_score, 6)
 
         # Apply Hard Constraints Filtering (Section 16, 17)
         filtered_candidates: List[RetrievalCandidate] = []
         for cand in candidates_map.values():
-            # Retraction hard filter: Retracted papers are excluded from general evidence queries unless specifically requested
+            # Retraction filter
             if cand.is_retracted and QueryIntent.EVIDENCE in sq.intents and not any("retract" in t for t in sq.expanded_terms):
                 continue
 
@@ -250,33 +339,38 @@ class HybridRetrievalPipeline:
                 if cand.publication_year < sq.date_range["since_year"]:
                     continue
 
-            # Medical system filter
-            if sq.medical_systems and cand.medical_system not in [ms.value for ms in sq.medical_systems]:
-                # allow if query didn't restrict to single system
-                pass
+            # Set human-readable multi-channel explanation
+            channels_active = [k for k, v in cand.channel_scores.items() if k in ["bm25", "vector", "graph", "safety"] and float(v) > 0.0]
+            cand.relevance_explanation = f"Multi-channel consensus across [{', '.join(channels_active)}] with RRF={cand.channel_scores.get('rrf_fusion', 0.0)}"
 
             filtered_candidates.append(cand)
 
         return filtered_candidates
 
-    def _retrieve_lexical(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
-        results = []
-        query_terms = [t.lower() for t in sq.expanded_terms]
+    def _retrieve_tier1_bm25_mesh(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
+        """Tier 1: Lexical BM25 with MeSH Controlled Vocabulary Expansion."""
+        results: List[Tuple[float, RetrievalCandidate]] = []
+        mesh_expansion = self.mesh_thesaurus.expand_query_mesh(sq.query)
+        all_query_terms = list(set([t.lower() for t in sq.expanded_terms] + mesh_expansion["expanded_terms"]))
+
+        doc_count = len(self._corpus)
+        # Compute term document frequencies
+        term_doc_counts: Dict[str, int] = {}
+        for term in all_query_terms:
+            count = sum(1 for d in self._corpus if term in f"{d['title']} {d['abstract']}".lower() or any(term in m.lower() for m in d.get("mesh_terms", [])))
+            term_doc_counts[term] = max(1, count)
 
         for doc in self._corpus:
-            text = f"{doc['title']} {doc['abstract']}".lower()
-            match_score = 0.0
-
-            for t in query_terms:
-                if t in text:
-                    # Title match boosted
-                    if t in doc['title'].lower():
-                        match_score += 0.5
-                    else:
-                        match_score += 0.2
-
-            if match_score > 0:
-                results.append(RetrievalCandidate(
+            score, matched_terms = self.mesh_thesaurus.calculate_bm25_score(
+                query_terms=all_query_terms,
+                title=doc["title"],
+                abstract=doc["abstract"],
+                mesh_terms=doc.get("mesh_terms", []),
+                doc_count=doc_count,
+                term_doc_counts=term_doc_counts
+            )
+            if score > 0.01 or any(e.lower() in doc["title"].lower() for e in sq.entities):
+                cand = RetrievalCandidate(
                     candidate_id=f"CAND-{doc['document_id']}",
                     document_id=doc["document_id"],
                     title=doc["title"],
@@ -290,19 +384,31 @@ class HybridRetrievalPipeline:
                     study_type=doc.get("study_type"),
                     evidence_level=doc.get("evidence_level"),
                     is_retracted=doc.get("is_retracted", False),
-                    channel_scores={"lexical": min(match_score, 1.0)},
+                    channel_scores={"bm25": score, "lexical": score, "matched_mesh_terms": matched_terms[:5]},
                     paragraph_anchor_hash=doc.get("paragraph_anchor_hash"),
-                    deduplication_sources=[doc["source_id"]]
-                ))
-        return results
+                    deduplication_sources=[doc["source_id"]],
+                    mesh_annotations=doc.get("mesh_terms", [])
+                )
+                results.append((score, cand))
 
-    def _retrieve_entities(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
-        results = []
+        results.sort(key=lambda x: x[0], reverse=True)
+        return [cand for _, cand in results]
+
+    def _retrieve_tier2_dense_vector(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
+        """Tier 2: Biomedical Dense Neural Vector Semantic Similarity."""
+        results: List[Tuple[float, RetrievalCandidate]] = []
+        query_vector = NeuralVectorEmbedder.embed_text(
+            text=f"{sq.query} {' '.join(sq.expanded_terms)}",
+            entities=sq.entities
+        )
+
         for doc in self._corpus:
-            doc_entities = [e.lower() for e in doc.get("entities", [])]
-            matched = any(ent.lower() in doc_entities for ent in sq.entities)
-            if matched:
-                results.append(RetrievalCandidate(
+            doc_vec = doc.get("dense_vector")
+            if not doc_vec:
+                continue
+            sim = NeuralVectorEmbedder.cosine_similarity(query_vector, doc_vec)
+            if sim > 0.12 or any(ent.lower() in [e.lower() for e in doc.get("entities", [])] for ent in sq.entities):
+                cand = RetrievalCandidate(
                     candidate_id=f"CAND-{doc['document_id']}",
                     document_id=doc["document_id"],
                     title=doc["title"],
@@ -316,43 +422,63 @@ class HybridRetrievalPipeline:
                     study_type=doc.get("study_type"),
                     evidence_level=doc.get("evidence_level"),
                     is_retracted=doc.get("is_retracted", False),
-                    channel_scores={"entity": 0.95},
+                    channel_scores={"vector": sim, "entity": sim},
                     paragraph_anchor_hash=doc.get("paragraph_anchor_hash"),
-                    deduplication_sources=[doc["source_id"]]
-                ))
-        return results
+                    deduplication_sources=[doc["source_id"]],
+                    mesh_annotations=doc.get("mesh_terms", []),
+                    vector_embedding=doc_vec
+                )
+                results.append((sim, cand))
 
-    def _retrieve_graph(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
-        results = []
-        for ent in sq.entities:
-            concept = self.graph.ontology.resolve_term(ent)
-            if concept:
-                rels = self.graph.get_entity_relationships(concept.concept_id)
-                for r in rels:
-                    for doc_id in r.document_ids:
-                        for doc in self._corpus:
-                            if doc["document_id"] == doc_id:
-                                results.append(RetrievalCandidate(
-                                    candidate_id=f"CAND-{doc['document_id']}",
-                                    document_id=doc["document_id"],
-                                    title=doc["title"],
-                                    snippet_or_passage=doc["abstract"][:250] + "...",
-                                    source_id=doc["source_id"],
-                                    source_organization=doc["source_organization"],
-                                    authority_tier=doc["authority_tier"],
-                                    license_class=doc["license_class"],
-                                    publication_year=doc.get("publication_year"),
-                                    medical_system=doc["medical_system"],
-                                    study_type=doc.get("study_type"),
-                                    evidence_level=r.evidence_level.value,
-                                    is_retracted=doc.get("is_retracted", False),
-                                    channel_scores={"graph": 0.90},
-                                    paragraph_anchor_hash=doc.get("paragraph_anchor_hash"),
-                                    deduplication_sources=[doc["source_id"]]
-                                ))
-        return results
+        results.sort(key=lambda x: x[0], reverse=True)
+        return [cand for _, cand in results]
+
+    def _retrieve_tier3_causal_graph(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
+        """Tier 3: Causal Knowledge Graph Multi-Hop Traversal."""
+        results: List[Tuple[float, RetrievalCandidate]] = []
+        query_concepts = list(set([sq.query.lower()] + [e.lower() for e in sq.entities] + [t.lower() for t in sq.expanded_terms]))
+
+        for doc in self._corpus:
+            doc_text = f"{doc['title']} {doc['abstract']}"
+            causal_score, matched_paths = self.causal_engine.score_document_causality(doc_text, query_concepts)
+
+            # Also check direct ontology relationships
+            for ent in sq.entities:
+                concept = self.graph.ontology.resolve_term(ent)
+                if concept:
+                    rels = self.graph.get_entity_relationships(concept.concept_id)
+                    for r in rels:
+                        if doc["document_id"] in r.document_ids:
+                            causal_score = max(causal_score, 0.90)
+
+            if causal_score > 0.05:
+                path_narratives = [p.mechanistic_narrative for p in matched_paths]
+                cand = RetrievalCandidate(
+                    candidate_id=f"CAND-{doc['document_id']}",
+                    document_id=doc["document_id"],
+                    title=doc["title"],
+                    snippet_or_passage=doc["abstract"][:250] + "...",
+                    source_id=doc["source_id"],
+                    source_organization=doc["source_organization"],
+                    authority_tier=doc["authority_tier"],
+                    license_class=doc["license_class"],
+                    publication_year=doc.get("publication_year"),
+                    medical_system=doc["medical_system"],
+                    study_type=doc.get("study_type"),
+                    evidence_level=doc.get("evidence_level"),
+                    is_retracted=doc.get("is_retracted", False),
+                    channel_scores={"graph": causal_score},
+                    paragraph_anchor_hash=doc.get("paragraph_anchor_hash"),
+                    deduplication_sources=[doc["source_id"]],
+                    causal_paths=path_narratives
+                )
+                results.append((causal_score, cand))
+
+        results.sort(key=lambda x: x[0], reverse=True)
+        return [cand for _, cand in results]
 
     def _retrieve_safety(self, sq: StructuredQuery) -> List[RetrievalCandidate]:
+        """Safety & Pharmacovigilance Retrieval."""
         results = []
         for doc in self._corpus:
             title_l = doc["title"].lower()
