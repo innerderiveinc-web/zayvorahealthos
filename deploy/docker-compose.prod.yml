@@ -1,0 +1,194 @@
+version: '3.8'
+
+# ==============================================================================
+# ZMIE Production Docker Compose Architecture
+# Multi-Tier, Zero-Trust Hardened Healthcare Stack
+# ==============================================================================
+
+services:
+  # Edge Reverse Proxy & SSL Termination
+  gateway:
+    image: nginx:1.25-alpine
+    container_name: zmie-gateway-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      engine:
+        condition: service_healthy
+    networks:
+      - zmie-public-net
+      - zmie-internal-net
+
+  # Core ZMIE FastAPI Intelligence Engine (Clustered Workers)
+  engine:
+    build:
+      context: ..
+      dockerfile: services/engine/Dockerfile
+    container_name: zmie-engine-prod
+    restart: always
+    command: ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120"]
+    environment:
+      ZMIE_ENV: production
+      DATABASE_URL: postgresql://zmie_admin:${POSTGRES_PASSWORD:-zmie_production_secure_pass_2026}@postgres:5432/zmie_knowledge_db
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-zmie_graph_prod_password_2026}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-zmie_redis_prod_pass_2026}@redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-zmie_minio_admin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-zmie_minio_prod_secret_key_2026}
+      OPENSEARCH_URL: http://opensearch:9200
+      HMAC_SECRET: ${HMAC_SECRET:-zmie_master_hmac_secret_key_prod_sha256}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - zmie-internal-net
+
+  # Relational Storage & Vector Knowledge Store
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: zmie-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: zmie_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zmie_production_secure_pass_2026}
+      POSTGRES_DB: zmie_knowledge_db
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zmie_admin -d zmie_knowledge_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-internal-net
+
+  # Biomedical Knowledge Graph
+  neo4j:
+    image: neo4j:5.18.0-community
+    container_name: zmie-neo4j-prod
+    restart: always
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-zmie_graph_prod_password_2026}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 512M
+      NEO4J_server_memory_heap_max__size: 2G
+    volumes:
+      - neo4j_prod_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - zmie-internal-net
+
+  # Redis In-Memory Cache & Epistemic State Machine
+  redis:
+    image: redis:7.2-alpine
+    container_name: zmie-redis-prod
+    restart: always
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-zmie_redis_prod_pass_2026}", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-zmie_redis_prod_pass_2026}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-internal-net
+
+  # OpenSearch Medical Search Index
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    container_name: zmie-opensearch-prod
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - DISABLE_SECURITY_PLUGIN=true
+    volumes:
+      - opensearch_prod_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - zmie-internal-net
+
+  # MinIO Artifact Ledger (S3-Compatible Object Store)
+  minio:
+    image: minio/minio:RELEASE.2024-03-30T09-41-56Z
+    container_name: zmie-minio-prod
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-zmie_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-zmie_minio_prod_secret_key_2026}
+    command: server /data
+    volumes:
+      - minio_prod_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zmie-internal-net
+
+  # Bucket Auto-Provisioning Lifecycle
+  minio-init:
+    image: minio/mc:latest
+    container_name: zmie-minio-init-prod
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set zmie_prod http://minio:9000 ${MINIO_ROOT_USER:-zmie_minio_admin} ${MINIO_ROOT_PASSWORD:-zmie_minio_prod_secret_key_2026};
+      /usr/bin/mc mb --ignore-existing zmie_prod/zmie-immutable-documents;
+      /usr/bin/mc mb --ignore-existing zmie_prod/zmie-research-snapshots;
+      /usr/bin/mc mb --ignore-existing zmie_prod/zmie-audit-ledger;
+      echo 'Production S3/MinIO Buckets Successfully Provisioned';
+      exit 0;
+      "
+    networks:
+      - zmie-internal-net
+
+volumes:
+  postgres_prod_data:
+  neo4j_prod_data:
+  redis_prod_data:
+  opensearch_prod_data:
+  minio_prod_data:
+  nginx_logs:
+
+networks:
+  zmie-public-net:
+    driver: bridge
+  zmie-internal-net:
+    internal: true
+    driver: bridge

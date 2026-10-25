@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     fastapi \
     "uvicorn[standard]" \
+    gunicorn \
     pydantic \
     pydantic-settings \
     httpx \
@@ -29,7 +30,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     sqlalchemy \
     greenlet \
     minio \
-    pgvector
+    pgvector \
+    pypdf \
+    python-dotenv
 
 # Runner image
 FROM python:3.11-slim as runner

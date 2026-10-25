@@ -23,6 +23,7 @@ docs/
 │   ├── real_implementation_and_operations_report.md # Real Implementation & Verification Results
 │   └── scientific_reproducibility_and_audit.md # Audit Trails & Reproducibility Guarantees
 ├── guides/                                    # Operational Playbooks & Runbooks
+│   ├── cloud_production_deployment.md         # Production Kubernetes & Docker Topology Guide
 │   ├── continuous_evidence_revalidation_specification.md # Evidence Lifecycle & Invalidation Engine
 │   ├── controlled_launch_specification.md     # Ringed Deployment & Production Release Gates
 │   ├── executive_pitch_and_demo_guide.md      # Commercial Showcase & Executive Demo Scripts

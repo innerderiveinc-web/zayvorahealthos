@@ -63,5 +63,11 @@ verify-all: audit test showcase commercial ## Complete production readiness veri
 	@echo "ALL PRODUCTION AUDITS & TESTS PASSING WITH ZERO REGRESSIONS."
 	@echo "======================================================================"
 
+deploy: ## Deploy hardened production stack via Docker Compose
+	./deploy/scripts/deploy_production.sh compose
+
+deploy-k8s: ## Deploy zero-trust enterprise stack to Kubernetes cluster
+	./deploy/scripts/deploy_production.sh k8s
+
 
 
