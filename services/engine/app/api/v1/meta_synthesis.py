@@ -18,6 +18,7 @@ from app.research.meta_analysis import (
 )
 from app.research.pico_extractor import PICOExtractionEngine, ExtractedClinicalTrial
 from app.research.pdf_table_miner import PDFClinicalTableMiner, PDFExtractionResult
+from app.research.prisma_engine import PRISMA2020Engine, PRISMASystematicReviewReport
 from app.ingestion.connectors.clinical_trials import ClinicalTrialsConnector
 
 router = APIRouter(prefix="/research/meta-synthesis", tags=["Meta-Analysis & Evidence Synthesis"])
@@ -122,3 +123,61 @@ async def mine_clinical_tables(req: TableMiningRequest):
         pages=req.pages_text,
         document_id=req.document_id
     )
+
+
+class PRISMAGenerateRequest(BaseModel):
+    query: str = Field(..., description="Target clinical topic, PICO question, or therapeutic substance")
+    filters: Optional[Dict[str, Any]] = None
+
+
+@router.post("/prisma/generate", response_model=PRISMASystematicReviewReport)
+async def generate_prisma_systematic_review(req: PRISMAGenerateRequest):
+    """
+    One-Click PRISMA 2020 Systematic Review & Publication Suite (Phase 5):
+    Autonomously executes full 4-phase PRISMA systematic review:
+    1. Multi-database trial harvest & deduplication flow metrics
+    2. Cochrane RoB 2.0 Risk of Bias evaluation
+    3. DerSimonian-Laird Random-Effects Meta-Analysis & Egger's funnel plot
+    4. PRISMA 2020 27-item checklist compliance verification
+    5. Standalone vector PRISMA flow diagram SVG
+    """
+    return PRISMA2020Engine.generate_review(pico_query=req.query, filters=req.filters)
+
+
+@router.get("/prisma/flow-diagram.svg")
+async def get_prisma_flow_diagram_svg(query: str = "ashwagandha anxiety"):
+    """
+    Returns standalone, publication-ready vector PRISMA 2020 Flow Diagram SVG.
+    """
+    review = PRISMA2020Engine.generate_review(pico_query=query)
+    return Response(content=review.flow_diagram_svg, media_type="image/svg+xml")
+
+
+@router.post("/prisma/export/bibtex")
+async def export_review_bibtex(req: PRISMAGenerateRequest):
+    """
+    Exports included studies in BibTeX format for LaTeX / Overleaf.
+    """
+    review = PRISMA2020Engine.generate_review(pico_query=req.query, filters=req.filters)
+    bibtex_str = PRISMA2020Engine.export_bibtex(review.risk_of_bias_table)
+    return Response(content=bibtex_str, media_type="text/plain")
+
+
+@router.post("/prisma/export/ris")
+async def export_review_ris(req: PRISMAGenerateRequest):
+    """
+    Exports included studies in RIS format for EndNote, Zotero, and Mendeley.
+    """
+    review = PRISMA2020Engine.generate_review(pico_query=req.query, filters=req.filters)
+    ris_str = PRISMA2020Engine.export_ris(review.risk_of_bias_table)
+    return Response(content=ris_str, media_type="text/plain")
+
+
+@router.post("/prisma/export/html")
+async def export_review_html(req: PRISMAGenerateRequest):
+    """
+    Exports complete publication manuscript in styled standalone HTML.
+    """
+    review = PRISMA2020Engine.generate_review(pico_query=req.query, filters=req.filters)
+    html_str = PRISMA2020Engine.export_publication_html(review)
+    return Response(content=html_str, media_type="text/html")
