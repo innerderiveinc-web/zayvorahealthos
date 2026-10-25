@@ -17,6 +17,7 @@ from app.research.meta_analysis import (
     OutcomeType
 )
 from app.research.pico_extractor import PICOExtractionEngine, ExtractedClinicalTrial
+from app.research.pdf_table_miner import PDFClinicalTableMiner, PDFExtractionResult
 from app.ingestion.connectors.clinical_trials import ClinicalTrialsConnector
 
 router = APIRouter(prefix="/research/meta-synthesis", tags=["Meta-Analysis & Evidence Synthesis"])
@@ -102,3 +103,22 @@ async def get_forest_plot_svg(req: MetaSynthesizeRequest):
     """
     res = await synthesize_evidence_meta_analysis(req)
     return Response(content=res.meta_summary.forest_plot_svg, media_type="image/svg+xml")
+
+
+class TableMiningRequest(BaseModel):
+    document_id: str = "DOC-CLINICAL-001"
+    pages_text: List[str]
+
+
+@router.post("/mine-tables", response_model=PDFExtractionResult)
+async def mine_clinical_tables(req: TableMiningRequest):
+    """
+    Full-Text PDF & Clinical Table Miner (Phase 4):
+    Parses full-text pages to extract Baseline Characteristics (Table 1),
+    Efficacy Outcome continuous metrics (Mean ± SD), and Adverse Event rates
+    with SHA-256 cryptographic provenance anchoring for zero-hallucination auditability.
+    """
+    return PDFClinicalTableMiner.parse_full_text_pages(
+        pages=req.pages_text,
+        document_id=req.document_id
+    )
