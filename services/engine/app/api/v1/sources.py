@@ -206,3 +206,73 @@ def screen_qarabadeen_safety(compound_key: str, req: ScreenCompoundSafetyRequest
     return res
 
 
+# --- External Ingestion Connectors (Track 3) ---
+
+class UnpaywallResolveRequest(BaseModel):
+    doi: str
+
+
+@router.get("/connectors/status")
+async def get_connectors_status():
+    """
+    Returns operational telemetry, authority tier, and license enforcement for all acquisition connectors.
+    """
+    from app.ingestion.connectors.europe_pmc import EuropePMCConnector
+    from app.ingestion.connectors.openalex import OpenAlexConnector
+    from app.ingestion.connectors.clinical_trials import ClinicalTrialsConnector
+    from app.ingestion.connectors.ayush import AYUSHResearchConnector
+    from app.ingestion.connectors.unpaywall import UnpaywallConnector
+    from app.ingestion.connectors.pmc_fulltext import PMCFullTextConnector
+
+    connectors = [
+        EuropePMCConnector(),
+        OpenAlexConnector(),
+        ClinicalTrialsConnector(),
+        AYUSHResearchConnector(),
+        UnpaywallConnector(),
+        PMCFullTextConnector()
+    ]
+
+    return {
+        "status": "active",
+        "total_connectors": len(connectors),
+        "connectors": [
+            {
+                "source_id": c.source_id,
+                "source_name": c.source_name,
+                "authority_tier": c.authority_tier.value,
+                "default_license_class": c.default_license_class.value,
+                "status": "ready"
+            }
+            for c in connectors
+        ]
+    }
+
+
+@router.post("/unpaywall/resolve")
+async def resolve_unpaywall_doi(req: UnpaywallResolveRequest):
+    """
+    Resolves a DOI against Unpaywall to determine Open Access status, license, and direct PDF URL.
+    """
+    from app.ingestion.connectors.unpaywall import UnpaywallConnector
+    connector = UnpaywallConnector()
+    res = await connector.identify(req.doi)
+    if not res:
+        raise HTTPException(status_code=404, detail=f"DOI '{req.doi}' not found in Unpaywall registry.")
+    return res
+
+
+@router.get("/pmc/{pmcid}")
+async def fetch_pmc_fulltext(pmcid: str):
+    """
+    Retrieves full-text structured BioC XML/JSON passages and tables for a given PMCID.
+    """
+    from app.ingestion.connectors.pmc_fulltext import PMCFullTextConnector
+    connector = PMCFullTextConnector()
+    res = await connector.identify(pmcid)
+    if not res:
+        raise HTTPException(status_code=404, detail=f"PMCID '{pmcid}' not found in PubMed Central repository.")
+    return res
+
+
+

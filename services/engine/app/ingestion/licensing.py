@@ -50,25 +50,14 @@ class LicensingIntelligenceEngine:
         """
         Guarantees copyright compliance before archiving or passing to indexing pipelines.
         """
-        sanitized = {
-            "title": document_data.get("title"),
-            "doi": document_data.get("doi"),
-            "pmid": document_data.get("pmid"),
-            "authors": document_data.get("authors"),
-            "publication_year": document_data.get("publication_year"),
-            "source_id": document_data.get("source_id"),
-            "license_class": license_class.value,
-            "external_url": document_data.get("external_url")
-        }
+        sanitized = dict(document_data)
+        sanitized["license_class"] = license_class.value
 
         if license_class in (LicenseClass.CLASS_A, LicenseClass.CLASS_B):
             # Full text & section paragraphs permitted
-            sanitized["full_text"] = document_data.get("full_text")
-            sanitized["sections"] = document_data.get("sections")
-            sanitized["tables"] = document_data.get("tables")
+            pass
         else:
             # Class C: Permitted abstract, claims, and external citation link only
-            sanitized["abstract"] = document_data.get("abstract")
             sanitized["full_text"] = None
             sanitized["sections"] = []
             sanitized["notice"] = "Class C: Full text restricted under publisher copyright. Stored as metadata + atomic extracted claims."

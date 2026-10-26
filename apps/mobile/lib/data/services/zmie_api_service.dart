@@ -3,6 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interaction_result.dart';
 import '../models/research_result.dart';
+import '../models/meta_synthesis_result.dart';
+import '../models/ddhg_result.dart';
+import '../models/hybrid_search_result.dart';
+import '../models/prisma_result.dart';
 
 class ZmieApiService {
   static const String defaultBaseUrl = 'http://127.0.0.1:8000';
@@ -108,6 +112,133 @@ class ZmieApiService {
       }
     } catch (_) {
       return ResearchResultModel.offlineMock(question);
+    }
+  }
+
+  Future<MetaSynthesisMobileResult> executeMetaSynthesis(String query, {bool randomEffects = true}) async {
+    final baseUrl = await getBaseUrl();
+    final apiKey = await getApiKey();
+    final uri = Uri.parse('$baseUrl/v1/research/meta-synthesis');
+
+    final payload = {
+      'query': query,
+      'outcome_type': 'mean_difference',
+      'use_random_effects': randomEffects,
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: _buildHeaders(apiKey),
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 12));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return MetaSynthesisMobileResult.fromJson(data);
+      } else {
+        return MetaSynthesisMobileResult.offlineFallback(query);
+      }
+    } catch (_) {
+      return MetaSynthesisMobileResult.offlineFallback(query);
+    }
+  }
+
+  Future<DDHGMobileResult> executeDDHGCheck({
+    required List<String> drugs,
+    required List<String> herbs,
+    List<Map<String, String>>? geneticVariants,
+    int egfr = 60,
+  }) async {
+    final baseUrl = await getBaseUrl();
+    final apiKey = await getApiKey();
+    final uri = Uri.parse('$baseUrl/v1/safety/ddhg-check');
+
+    final payload = {
+      'drugs': drugs,
+      'herbs': herbs,
+      'genetic_variants': geneticVariants ?? [],
+      'patient_factors': {'egfr': egfr},
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: _buildHeaders(apiKey),
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return DDHGMobileResult.fromJson(data);
+      } else {
+        return DDHGMobileResult.offlineFallback();
+      }
+    } catch (_) {
+      return DDHGMobileResult.offlineFallback();
+    }
+  }
+
+  Future<HybridSearchResultMobile> executeHybridSearch(String query, {String mode = 'evidence'}) async {
+    final baseUrl = await getBaseUrl();
+    final apiKey = await getApiKey();
+    final uri = Uri.parse('$baseUrl/v1/search/hybrid');
+
+    final payload = {
+      'query': query,
+      'mode': mode,
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: _buildHeaders(apiKey),
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return HybridSearchResultMobile.fromJson(data);
+      } else {
+        return HybridSearchResultMobile.offlineFallback(query);
+      }
+    } catch (_) {
+      return HybridSearchResultMobile.offlineFallback(query);
+    }
+  }
+
+  Future<PRISMAReviewMobileResult> generatePRISMAReview({
+    required String question,
+    required String query,
+    List<String> inclusionCriteria = const ['Humans', 'RCTs'],
+    List<String> exclusionCriteria = const ['Animal models', 'No control group'],
+  }) async {
+    final baseUrl = await getBaseUrl();
+    final apiKey = await getApiKey();
+    final uri = Uri.parse('$baseUrl/v1/research/prisma/generate');
+
+    final payload = {
+      'research_question': question,
+      'query': query,
+      'inclusion_criteria': inclusionCriteria,
+      'exclusion_criteria': exclusionCriteria,
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: _buildHeaders(apiKey),
+        body: json.encode(payload),
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        return PRISMAReviewMobileResult.fromJson(data);
+      } else {
+        return PRISMAReviewMobileResult.offlineFallback(question);
+      }
+    } catch (_) {
+      return PRISMAReviewMobileResult.offlineFallback(question);
     }
   }
 
