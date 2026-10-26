@@ -408,7 +408,9 @@ async def workbench():
 async def catalog_seed():
     """Serves the standalone pre-compiled medical knowledge catalog seed JSON."""
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    json_path = os.path.join(root_dir, "catalog_seed.json")
+    json_path = os.path.join(root_dir, "data", "seed", "catalog_seed.json")
+    if not os.path.exists(json_path):
+        json_path = os.path.join(root_dir, "catalog_seed.json")
     if os.path.exists(json_path):
         with open(json_path, "r", encoding="utf-8") as f:
             return Response(content=f.read(), media_type="application/json")

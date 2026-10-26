@@ -4,8 +4,8 @@ Scientific Trust Firewall & Real-Source Verification Acceptance Tests
 """
 
 import unittest
-from app.trust_firewall.engine import ScientificTrustFirewallEngine
-from app.trust_firewall.models import (
+from app.firewall.engine import ScientificTrustFirewallEngine
+from app.firewall.models import (
     TrustDecision,
     CanonicalSourceRegistry,
     VerificationState,

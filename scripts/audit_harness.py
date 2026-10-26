@@ -21,7 +21,9 @@ WORKBENCH_PATH = os.path.join(ROOT_DIR, "workbench.html")
 INDEX_PATH = os.path.join(ROOT_DIR, "index.html")
 SW_PATH = os.path.join(ROOT_DIR, "sw.js")
 NETLIFY_PATH = os.path.join(ROOT_DIR, "netlify.toml")
-SEED_PATH = os.path.join(ROOT_DIR, "catalog_seed.json")
+SEED_PATH = os.path.join(ROOT_DIR, "data", "seed", "catalog_seed.json")
+if not os.path.exists(SEED_PATH):
+    SEED_PATH = os.path.join(ROOT_DIR, "catalog_seed.json")
 JSC_BIN = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc"
 
 class HTMLValidator(HTMLParser):

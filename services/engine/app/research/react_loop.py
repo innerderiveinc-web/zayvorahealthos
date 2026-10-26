@@ -55,7 +55,9 @@ class ReActToolRegistry:
         try:
             import os
             root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-            seed_path = os.path.join(root_dir, "catalog_seed.json")
+            seed_path = os.path.join(root_dir, "data", "seed", "catalog_seed.json")
+            if not os.path.exists(seed_path):
+                seed_path = os.path.join(root_dir, "catalog_seed.json")
             if not os.path.exists(seed_path):
                 seed_path = "catalog_seed.json"
 

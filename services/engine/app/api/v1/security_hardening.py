@@ -7,8 +7,8 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from app.security_hardening.engine import ProductionSecurityHardeningEngine
-from app.security_hardening.models import (
+from app.security.engine import ProductionSecurityHardeningEngine
+from app.security.models import (
     DifferentialPrivacyQueryResult,
     DeidentificationResult,
     EnvelopeEncryptedArtifact,

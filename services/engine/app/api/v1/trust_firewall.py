@@ -7,8 +7,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from app.trust_firewall.engine import ScientificTrustFirewallEngine
-from app.trust_firewall.models import (
+from app.firewall.engine import ScientificTrustFirewallEngine
+from app.firewall.models import (
     SourceVerificationResult,
     FirewallEvaluationReport,
     SourceLedgerEntry,

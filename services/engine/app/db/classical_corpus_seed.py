@@ -1298,7 +1298,10 @@ class ClassicalCorpusBulkLoader:
         # Check if authentic pre-compiled monograph exists in catalog_seed.json
         try:
             import json, os
-            catalog_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "catalog_seed.json"))
+            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+            catalog_file = os.path.join(root_dir, "data", "seed", "catalog_seed.json")
+            if not os.path.exists(catalog_file):
+                catalog_file = os.path.join(root_dir, "catalog_seed.json")
             if os.path.exists(catalog_file):
                 with open(catalog_file, "r", encoding="utf-8") as f:
                     c_data = json.load(f)

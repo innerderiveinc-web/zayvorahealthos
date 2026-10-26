@@ -29,7 +29,7 @@ from app.models.terminology_evolution import (
     ReviewDecision,
     SemanticMapping,
 )
-from app.ontology_engine.core import GlobalTerminologyEvolutionEngine
+from app.ontology.core import GlobalTerminologyEvolutionEngine
 
 
 class TestTerminologyEvolutionAcceptance(unittest.TestCase):

@@ -42,7 +42,7 @@ from app.continuous_revalidation.models import (
     KnowledgeHealth,
 )
 
-from app.trust_firewall.engine import ScientificTrustFirewallEngine
+from app.firewall.engine import ScientificTrustFirewallEngine
 
 
 class ContinuousRevalidationEngine:

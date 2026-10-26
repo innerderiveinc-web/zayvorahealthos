@@ -7,8 +7,8 @@ import unittest
 import time
 import hmac
 import hashlib
-from app.security_hardening.engine import ProductionSecurityHardeningEngine
-from app.security_hardening.models import (
+from app.security.engine import ProductionSecurityHardeningEngine
+from app.security.models import (
     PrivacyMechanism,
     PHIIdentifierType,
     DataClassification,
