@@ -14,7 +14,7 @@ import unittest
 class TestFrontendUXArchitecture(unittest.TestCase):
 
     def setUp(self):
-        self.web_src = "services/web/src"
+        self.web_src = "apps/web/src" if os.path.exists("apps/web/src") else "services/web/src"
 
     def test_01_required_page_routes_exist(self):
         """Verifies all primary canonical product routes exist under src/app."""

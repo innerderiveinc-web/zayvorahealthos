@@ -6,7 +6,7 @@ set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="$DIR/.venv/bin/python3"
-export PYTHONPATH="$DIR/services/engine:$DIR/sdk/python:$PYTHONPATH"
+export PYTHONPATH="$DIR/services/engine:$DIR/packages/sdk-python:$DIR/sdk/python:$PYTHONPATH"
 
 # Colors for terminal styling
 CYAN='\033[0;36m'

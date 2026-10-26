@@ -18,7 +18,7 @@ import shutil
 import subprocess
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-SRC_DIR = os.path.join(ROOT_DIR, "src")
+SRC_DIR = os.path.join(ROOT_DIR, "apps", "workbench", "src")
 WORKBENCH_PATH = os.path.join(ROOT_DIR, "workbench.html")
 INDEX_PATH = os.path.join(ROOT_DIR, "index.html")
 

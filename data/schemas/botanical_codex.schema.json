@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ZMIE Botanical Codex Entry Contract",
+  "type": "object",
+  "required": ["key", "botanical_name", "evidence_grade"],
+  "properties": {
+    "key": { "type": "string" },
+    "botanical_name": { "type": "string" },
+    "family": { "type": "string" },
+    "common_names": { "type": "array", "items": { "type": "string" } },
+    "clinical_domain": { "type": "string" },
+    "evidence_grade": { "type": "string" },
+    "active_phytochemicals": { "type": "array", "items": { "type": "string" } },
+    "rct_count": { "type": "integer" },
+    "unani": { "type": "object" },
+    "ayurveda": { "type": "object" },
+    "modern_pharmacology": { "type": "string" }
+  }
+}

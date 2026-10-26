@@ -1,0 +1,19 @@
+{
+  "version": "2.4.0",
+  "description": "ZMIE Modular Source Architecture",
+  "components": [
+    "components/markup.html"
+  ],
+  "data": [
+    "data/mesh_dictionary.js",
+    "data/clinical_monographs.js",
+    "data/rx_knowledge_base.js",
+    "data/codex_data.js",
+    "data/differential_data.js"
+  ],
+  "scripts": [
+    "scripts/core_logic.js",
+    "scripts/main.js"
+  ],
+  "footer": "components/footer.html"
+}
