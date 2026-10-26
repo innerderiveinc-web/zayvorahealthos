@@ -75,6 +75,16 @@ export const NavigationHeader: React.FC<{ activeTab?: string }> = ({ activeTab =
       </nav>
 
       <div className="flex items-center space-x-3 flex-shrink-0">
+        <a
+          href="/workbench"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Zero-Dependency Offline Edge Client for Field Doctors & Remote Clinics"
+          className="text-[11px] font-mono text-amber-400 bg-amber-950/40 border border-amber-600/40 hover:bg-amber-900/50 px-2.5 py-1 rounded flex items-center gap-1.5 transition"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+          OFFLINE EDGE CLIENT
+        </a>
         <span className="text-[11px] font-mono text-slate-400 border border-slate-800 bg-slate-900 px-2 py-1 rounded">
           KNOWLEDGE: 2026.10
         </span>

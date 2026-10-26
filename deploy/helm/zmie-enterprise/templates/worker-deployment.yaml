@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.worker.name }}
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.worker.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.worker.name }}
+    spec:
+      containers:
+        - name: celery-worker
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          command: ["celery", "-A", "app.ingestion.celery_app", "worker", "-l", "info", "-c", "{{ .Values.worker.concurrency }}"]
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}

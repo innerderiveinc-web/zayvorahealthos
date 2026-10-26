@@ -1,0 +1,114 @@
+# Default values for zmie-enterprise.
+# Fortune-500 Enterprise Medical Intelligence Cloud Stack
+
+global:
+  environment: production
+  namespace: zmie-production
+
+# FastAPI Core Biomedical Engine
+engine:
+  name: engine
+  replicaCount: 3
+  image:
+    repository: zmie/biomedical-engine
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+
+# Next.js 15 Enterprise Web Portal
+web:
+  name: web
+  replicaCount: 2
+  image:
+    repository: zmie/web-portal
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Celery Distributed Harvesting Workers
+worker:
+  name: worker
+  replicaCount: 2
+  concurrency: 8
+  image:
+    repository: zmie/biomedical-engine
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1500m
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+# Enterprise Distributed PostgreSQL with pgvector (128-dim embeddings)
+postgresql:
+  enabled: true
+  image:
+    repository: pgvector/pgvector
+    tag: "pg16"
+  auth:
+    database: zmie_clinical_warehouse
+    username: zmie_admin
+    existingSecret: zmie-db-secret
+  persistence:
+    enabled: true
+    size: 100Gi
+
+# Redis for Caching and Celery Queues
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    existingSecret: zmie-redis-secret
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+# Cloud Ingress & TLS
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: healthos.zmie.org
+      paths:
+        - path: /v1
+          pathType: Prefix
+          service: engine
+        - path: /
+          pathType: Prefix
+          service: web
+  tls:
+    - secretName: zmie-tls-certificate
+      hosts:
+        - healthos.zmie.org

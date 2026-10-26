@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  ENVIRONMENT: "{{ .Values.global.environment }}"
+  DATABASE_URL: "postgresql+asyncpg://zmie_admin@{{ .Release.Name }}-postgresql:5432/zmie_clinical_warehouse"
+  REDIS_URL: "redis://:$(REDIS_PASSWORD)@{{ .Release.Name }}-redis-master:6379/0"
+  CELERY_BROKER_URL: "redis://:$(REDIS_PASSWORD)@{{ .Release.Name }}-redis-master:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:$(REDIS_PASSWORD)@{{ .Release.Name }}-redis-master:6379/1"
+  ENABLE_CRYPTO_ANCHORS: "true"
+  FAIL_CLOSED_ON_TAMPER: "true"

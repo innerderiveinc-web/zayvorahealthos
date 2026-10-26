@@ -1,0 +1,15 @@
+apiVersion: v2
+name: zmie-enterprise
+description: Enterprise Medical Intelligence Engine & Clinical Research Platform (ZMIE HealthOS)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - medical-intelligence
+  - clinical-decision-support
+  - healthcare-os
+  - pgvector
+  - celery-harvesting
+maintainers:
+  - name: ZAYVORA Health Architecture Team
+    email: devops@zmie-research.org

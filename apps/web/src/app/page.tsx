@@ -206,6 +206,42 @@ export default function ZMIEProductPortal() {
             ))}
           </div>
 
+          {/* Enterprise & Institutional Dual-Deployment Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto text-left pt-2 pb-2">
+            <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-4 flex items-start space-x-3.5 shadow-lg">
+              <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400 mt-0.5">
+                <Network className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-white tracking-wider">Cloud Enterprise Tier</span>
+                  <span className="text-[10px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded font-mono">Distributed</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Full-stack Next.js 15 + FastAPI with PostgreSQL (pgvector), Redis queues, and automated live PubMed/PMC harvesters. Designed for Hospitals, Health Systems & Pharma R&D.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/80 border border-amber-500/30 rounded-xl p-4 flex items-start space-x-3.5 shadow-lg">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 mt-0.5">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-white tracking-wider">Offline Edge Workbench</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">Zero-Dependency</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Single-file client engine bundled with 657 botanical codices and local triage algorithms for field doctors, disaster response, and air-gapped clinical deployments.
+                </p>
+                <a href="/workbench" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 font-semibold mt-2">
+                  Launch Field Client <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+
           {/* Mode Selector */}
           <div className="flex justify-center gap-2 pt-2">
             {(["Search", "Evidence", "Safety", "Compare", "Deep Research"] as const).map((mode) => (
